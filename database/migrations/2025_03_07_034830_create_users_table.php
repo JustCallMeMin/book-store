@@ -13,6 +13,9 @@ return new class extends Migration {
             $table->string('last_name');
             $table->string('email')->unique();
             $table->string('password');
+            $table->rememberToken();
+            $table->timestamp('remember_token_expires_at')->nullable(); // Thêm cột này để lưu thời gian hết hạn của remember token
+            $table->boolean('remember_me')->default(false);
             $table->timestamps();
         });
     }

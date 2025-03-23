@@ -1,0 +1,68 @@
+{
+    "kind": "books#volume",
+    "id": "iFYfAQAAIAAJ",
+    "etag": "8ppgDWk0nLE",
+    "selfLink": "https:\/\/www.googleapis.com\/books\/v1\/volumes\/iFYfAQAAIAAJ",
+    "volumeInfo": {
+        "title": "Frankenstein, Or, The Modern Prometheus",
+        "authors": [
+            "Mary Wollstonecraft Shelley"
+        ],
+        "publishedDate": "1993",
+        "description": "Originally published: London: Printed for G. and W.B. Whittaker, 1823. In 2 vols.",
+        "industryIdentifiers": [
+            {
+                "type": "OTHER",
+                "identifier": "STANFORD:36105003420598"
+            }
+        ],
+        "readingModes": {
+            "text": false,
+            "image": false
+        },
+        "pageCount": 158,
+        "printType": "BOOK",
+        "categories": [
+            "Fiction"
+        ],
+        "maturityRating": "NOT_MATURE",
+        "allowAnonLogging": false,
+        "contentVersion": "0.4.2.0.preview.0",
+        "panelizationSummary": {
+            "containsEpubBubbles": false,
+            "containsImageBubbles": false
+        },
+        "imageLinks": {
+            "smallThumbnail": "http:\/\/books.google.com\/books\/content?id=iFYfAQAAIAAJ&printsec=frontcover&img=1&zoom=5&source=gbs_api",
+            "thumbnail": "http:\/\/books.google.com\/books\/content?id=iFYfAQAAIAAJ&printsec=frontcover&img=1&zoom=1&source=gbs_api"
+        },
+        "language": "en",
+        "previewLink": "http:\/\/books.google.com.vn\/books?id=iFYfAQAAIAAJ&q=intitle:Frankenstein%253B%2BOr%252C%2BThe%2BModern%2BPrometheus%2Binauthor:Shelley%252C%2BMary%2BWollstonecraft&dq=intitle:Frankenstein%253B%2BOr%252C%2BThe%2BModern%2BPrometheus%2Binauthor:Shelley%252C%2BMary%2BWollstonecraft&hl=&cd=1&source=gbs_api",
+        "infoLink": "http:\/\/books.google.com.vn\/books?id=iFYfAQAAIAAJ&dq=intitle:Frankenstein%253B%2BOr%252C%2BThe%2BModern%2BPrometheus%2Binauthor:Shelley%252C%2BMary%2BWollstonecraft&hl=&source=gbs_api",
+        "canonicalVolumeLink": "https:\/\/books.google.com\/books\/about\/Frankenstein_Or_The_Modern_Prometheus.html?hl=&id=iFYfAQAAIAAJ"
+    },
+    "saleInfo": {
+        "country": "VN",
+        "saleability": "NOT_FOR_SALE",
+        "isEbook": false
+    },
+    "accessInfo": {
+        "country": "VN",
+        "viewability": "NO_PAGES",
+        "embeddable": false,
+        "publicDomain": false,
+        "textToSpeechPermission": "ALLOWED",
+        "epub": {
+            "isAvailable": false
+        },
+        "pdf": {
+            "isAvailable": false
+        },
+        "webReaderLink": "http:\/\/play.google.com\/books\/reader?id=iFYfAQAAIAAJ&hl=&source=gbs_api",
+        "accessViewStatus": "NONE",
+        "quoteSharingAllowed": false
+    },
+    "searchInfo": {
+        "textSnippet": "Originally published: London: Printed for G. and W.B. Whittaker, 1823. In 2 vols."
+    }
+}

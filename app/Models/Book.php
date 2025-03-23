@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Book extends Model
 {
@@ -12,6 +13,7 @@ class Book extends Model
 
     protected $fillable = [
         'gutendex_id',
+        'google_books_id',
         'title',
         'subjects',
         'bookshelves',
@@ -21,7 +23,19 @@ class Book extends Model
         'copyright',
         'media_type',
         'formats',
-        'download_count'
+        'download_count',
+        'isbn',
+        'publisher',
+        'published_date',
+        'description',
+        'page_count',
+        'cover_image',
+        'quantity_in_stock',
+        'price',
+        'price_note',
+        'discount_percent',
+        'is_featured',
+        'is_active'
     ];
 
     protected $casts = [
@@ -32,7 +46,14 @@ class Book extends Model
         'translators' => 'array',
         'formats' => 'array',
         'copyright' => 'boolean',
-        'download_count' => 'integer'
+        'download_count' => 'integer',
+        'published_date' => 'date',
+        'page_count' => 'integer',
+        'quantity_in_stock' => 'integer',
+        'price' => 'decimal:2',
+        'discount_percent' => 'decimal:2',
+        'is_featured' => 'boolean',
+        'is_active' => 'boolean'
     ];
 
     /**
@@ -40,7 +61,47 @@ class Book extends Model
      */
     public function authors(): BelongsToMany
     {
-        return $this->belongsToMany(Author::class, 'book_authors', 'book_id', 'author_id');
+        return $this->belongsToMany(Author::class, 'book_authors');
+    }
+
+    /**
+     * Quan hệ nhiều-nhiều với Category
+     */
+    public function categories(): BelongsToMany
+    {
+        return $this->belongsToMany(Category::class, 'book_categories');
+    }
+
+    /**
+     * Lấy tất cả các đánh giá của sách
+     */
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(Review::class);
+    }
+
+    /**
+     * Lấy tất cả các chi tiết đơn hàng có sách này
+     */
+    public function orderItems(): HasMany
+    {
+        return $this->hasMany(OrderItem::class);
+    }
+
+    /**
+     * Lấy tất cả các mục trong giỏ hàng có sách này
+     */
+    public function cartItems(): HasMany
+    {
+        return $this->hasMany(CartItem::class);
+    }
+
+    /**
+     * Lấy tất cả các chi tiết nhập có sách này
+     */
+    public function importItems(): HasMany
+    {
+        return $this->hasMany(ImportItem::class);
     }
 
     /**

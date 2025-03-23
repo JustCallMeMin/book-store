@@ -1,0 +1,132 @@
+{
+    "gutendex": {
+        "id": 1342,
+        "title": "Pride and Prejudice",
+        "authors": [
+            {
+                "name": "Austen, Jane",
+                "birth_year": 1775,
+                "death_year": 1817
+            }
+        ],
+        "summaries": [
+            "\"Pride and Prejudice\" by Jane Austen is a classic novel written in the early 19th century. The story delves into themes of love, social class, and individual agency, largely revolving around the life of Elizabeth Bennet, one of five sisters from a modest but genteel family navigating the complex social landscape of Regency England.  The opening of the novel introduces the seemingly universal truth that a single man of wealth is a target for matchmaking mothers in the neighborhood. Mrs. Bennet is eager to marry off her daughters and is excited to hear about the arrival of Mr. Bingley, a wealthy young man who has taken up residence at Netherfield Park. Mr. Bennet's teasing yet indifferent nature contrasts sharply with Mrs. Bennet's anxious and businesslike demeanor as she plans to visit Mr. Bingley to create an opportunity for her daughters. Their witty exchanges set the tone for the story's exploration of family dynamics and social expectations, while also hinting at deeper character developments and the challenges Elizabeth will face regarding love and prejudice in her interactions with Mr. Darcy and the Bingley family. (This is an automatically generated summary.)"
+        ],
+        "translators": [],
+        "subjects": [
+            "Courtship -- Fiction",
+            "Domestic fiction",
+            "England -- Fiction",
+            "Love stories",
+            "Sisters -- Fiction",
+            "Social classes -- Fiction",
+            "Young women -- Fiction"
+        ],
+        "bookshelves": [
+            "Best Books Ever Listings",
+            "Browsing: Culture\/Civilization\/Society",
+            "Browsing: Fiction",
+            "Browsing: Literature",
+            "Harvard Classics"
+        ],
+        "languages": [
+            "en"
+        ],
+        "copyright": false,
+        "media_type": "Text",
+        "formats": {
+            "text\/html": "https:\/\/www.gutenberg.org\/ebooks\/1342.html.images",
+            "application\/epub+zip": "https:\/\/www.gutenberg.org\/ebooks\/1342.epub3.images",
+            "application\/x-mobipocket-ebook": "https:\/\/www.gutenberg.org\/ebooks\/1342.kf8.images",
+            "application\/rdf+xml": "https:\/\/www.gutenberg.org\/ebooks\/1342.rdf",
+            "image\/jpeg": "https:\/\/www.gutenberg.org\/cache\/epub\/1342\/pg1342.cover.medium.jpg",
+            "text\/plain; charset=us-ascii": "https:\/\/www.gutenberg.org\/ebooks\/1342.txt.utf-8",
+            "application\/octet-stream": "https:\/\/www.gutenberg.org\/cache\/epub\/1342\/pg1342-h.zip"
+        },
+        "download_count": 59020
+    },
+    "google_books": {
+        "kind": "books#volume",
+        "id": "mCVXAAAAYAAJ",
+        "etag": "wkKgCyrTNVo",
+        "selfLink": "https:\/\/www.googleapis.com\/books\/v1\/volumes\/mCVXAAAAYAAJ",
+        "volumeInfo": {
+            "title": "Pride and Prejudice, Volume 2",
+            "authors": [
+                "Jane Austen"
+            ],
+            "publisher": "John Grant",
+            "publishedDate": "1905",
+            "industryIdentifiers": [
+                {
+                    "type": "OTHER",
+                    "identifier": "UVA:X000197062"
+                }
+            ],
+            "readingModes": {
+                "text": false,
+                "image": true
+            },
+            "pageCount": 318,
+            "printType": "BOOK",
+            "maturityRating": "NOT_MATURE",
+            "allowAnonLogging": false,
+            "contentVersion": "1.5.4.0.full.1",
+            "panelizationSummary": {
+                "containsEpubBubbles": false,
+                "containsImageBubbles": false
+            },
+            "imageLinks": {
+                "smallThumbnail": "http:\/\/books.google.com\/books\/content?id=mCVXAAAAYAAJ&printsec=frontcover&img=1&zoom=5&edge=curl&source=gbs_api",
+                "thumbnail": "http:\/\/books.google.com\/books\/content?id=mCVXAAAAYAAJ&printsec=frontcover&img=1&zoom=1&edge=curl&source=gbs_api"
+            },
+            "language": "en",
+            "previewLink": "http:\/\/books.google.com.vn\/books?id=mCVXAAAAYAAJ&printsec=frontcover&dq=intitle:Pride%2Band%2BPrejudice%2Binauthor:Austen%252C%2BJane&hl=&cd=1&source=gbs_api",
+            "infoLink": "https:\/\/play.google.com\/store\/books\/details?id=mCVXAAAAYAAJ&source=gbs_api",
+            "canonicalVolumeLink": "https:\/\/play.google.com\/store\/books\/details?id=mCVXAAAAYAAJ"
+        },
+        "saleInfo": {
+            "country": "VN",
+            "saleability": "FREE",
+            "isEbook": true,
+            "buyLink": "https:\/\/play.google.com\/store\/books\/details?id=mCVXAAAAYAAJ&rdid=book-mCVXAAAAYAAJ&rdot=1&source=gbs_api"
+        },
+        "accessInfo": {
+            "country": "VN",
+            "viewability": "ALL_PAGES",
+            "embeddable": true,
+            "publicDomain": true,
+            "textToSpeechPermission": "ALLOWED",
+            "epub": {
+                "isAvailable": false,
+                "downloadLink": "http:\/\/books.google.com.vn\/books\/download\/Pride_and_Prejudice_Volume_2.epub?id=mCVXAAAAYAAJ&hl=&output=epub&source=gbs_api"
+            },
+            "pdf": {
+                "isAvailable": true,
+                "downloadLink": "http:\/\/books.google.com.vn\/books\/download\/Pride_and_Prejudice_Volume_2.pdf?id=mCVXAAAAYAAJ&hl=&output=pdf&sig=ACfU3U1jeuX-x81qivxGaGsP5Js0EqP6bA&source=gbs_api"
+            },
+            "webReaderLink": "http:\/\/play.google.com\/books\/reader?id=mCVXAAAAYAAJ&hl=&source=gbs_api",
+            "accessViewStatus": "FULL_PUBLIC_DOMAIN",
+            "quoteSharingAllowed": false
+        }
+    },
+    "extracted_info": {
+        "isbn": null,
+        "publisher": "John Grant",
+        "published_date": "1905",
+        "description": null,
+        "page_count": 318,
+        "cover_image": "http:\/\/books.google.com\/books\/content?id=mCVXAAAAYAAJ&printsec=frontcover&img=1&zoom=1&edge=curl&source=gbs_api",
+        "price": 162000,
+        "categories": [],
+        "contact_for_price": false,
+        "is_free": true,
+        "saleability": "FREE",
+        "download_links": {
+            "pdf": "http:\/\/books.google.com.vn\/books\/download\/Pride_and_Prejudice_Volume_2.pdf?id=mCVXAAAAYAAJ&hl=&output=pdf&sig=ACfU3U1jeuX-x81qivxGaGsP5Js0EqP6bA&source=gbs_api",
+            "epub": "http:\/\/books.google.com.vn\/books\/download\/Pride_and_Prejudice_Volume_2.epub?id=mCVXAAAAYAAJ&hl=&output=epub&source=gbs_api"
+        },
+        "web_reader_link": "http:\/\/play.google.com\/books\/reader?id=mCVXAAAAYAAJ&hl=&source=gbs_api",
+        "access_status": "FULL_PUBLIC_DOMAIN"
+    }
+}

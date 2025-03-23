@@ -1,0 +1,141 @@
+{
+    "gutendex": {
+        "id": 84,
+        "title": "Frankenstein; Or, The Modern Prometheus",
+        "authors": [
+            {
+                "name": "Shelley, Mary Wollstonecraft",
+                "birth_year": 1797,
+                "death_year": 1851
+            }
+        ],
+        "summaries": [
+            "\"Frankenstein; Or, The Modern Prometheus\" by Mary Wollstonecraft Shelley is a novel written in the early 19th century. The story explores themes of ambition, the quest for knowledge, and the consequences of man's hubris through the experiences of Victor Frankenstein and the monstrous creation of his own making.   The opening of the book introduces Robert Walton, an ambitious explorer on a quest to discover new lands and knowledge in the icy regions of the Arctic. In his letters to his sister Margaret, he expresses both enthusiasm and the fear of isolation in his grand venture. As Walton's expedition progresses, he encounters a mysterious, emaciated stranger who has faced great suffering—furthering the intrigue of his narrative. This stranger ultimately reveals his tale of creation, loss, and the profound consequences of seeking knowledge that lies beyond human bounds. The narrative is set up in a manner that suggests a deep examination of the emotions and ethical dilemmas faced by those who dare to defy the natural order. (This is an automatically generated summary.)"
+        ],
+        "translators": [],
+        "subjects": [
+            "Frankenstein's monster (Fictitious character) -- Fiction",
+            "Frankenstein, Victor (Fictitious character) -- Fiction",
+            "Gothic fiction",
+            "Horror tales",
+            "Monsters -- Fiction",
+            "Science fiction",
+            "Scientists -- Fiction"
+        ],
+        "bookshelves": [
+            "Browsing: Culture\/Civilization\/Society",
+            "Browsing: Fiction",
+            "Browsing: Gender & Sexuality Studies",
+            "Browsing: Literature",
+            "Browsing: Science-Fiction & Fantasy",
+            "Gothic Fiction",
+            "Movie Books",
+            "Precursors of Science Fiction",
+            "Science Fiction by Women"
+        ],
+        "languages": [
+            "en"
+        ],
+        "copyright": false,
+        "media_type": "Text",
+        "formats": {
+            "text\/html": "https:\/\/www.gutenberg.org\/ebooks\/84.html.images",
+            "application\/epub+zip": "https:\/\/www.gutenberg.org\/ebooks\/84.epub3.images",
+            "application\/x-mobipocket-ebook": "https:\/\/www.gutenberg.org\/ebooks\/84.kf8.images",
+            "application\/rdf+xml": "https:\/\/www.gutenberg.org\/ebooks\/84.rdf",
+            "image\/jpeg": "https:\/\/www.gutenberg.org\/cache\/epub\/84\/pg84.cover.medium.jpg",
+            "text\/plain; charset=us-ascii": "https:\/\/www.gutenberg.org\/ebooks\/84.txt.utf-8",
+            "application\/octet-stream": "https:\/\/www.gutenberg.org\/cache\/epub\/84\/pg84-h.zip"
+        },
+        "download_count": 146616
+    },
+    "google_books": {
+        "kind": "books#volume",
+        "id": "iFYfAQAAIAAJ",
+        "etag": "8ppgDWk0nLE",
+        "selfLink": "https:\/\/www.googleapis.com\/books\/v1\/volumes\/iFYfAQAAIAAJ",
+        "volumeInfo": {
+            "title": "Frankenstein, Or, The Modern Prometheus",
+            "authors": [
+                "Mary Wollstonecraft Shelley"
+            ],
+            "publishedDate": "1993",
+            "description": "Originally published: London: Printed for G. and W.B. Whittaker, 1823. In 2 vols.",
+            "industryIdentifiers": [
+                {
+                    "type": "OTHER",
+                    "identifier": "STANFORD:36105003420598"
+                }
+            ],
+            "readingModes": {
+                "text": false,
+                "image": false
+            },
+            "pageCount": 158,
+            "printType": "BOOK",
+            "categories": [
+                "Fiction"
+            ],
+            "maturityRating": "NOT_MATURE",
+            "allowAnonLogging": false,
+            "contentVersion": "0.4.2.0.preview.0",
+            "panelizationSummary": {
+                "containsEpubBubbles": false,
+                "containsImageBubbles": false
+            },
+            "imageLinks": {
+                "smallThumbnail": "http:\/\/books.google.com\/books\/content?id=iFYfAQAAIAAJ&printsec=frontcover&img=1&zoom=5&source=gbs_api",
+                "thumbnail": "http:\/\/books.google.com\/books\/content?id=iFYfAQAAIAAJ&printsec=frontcover&img=1&zoom=1&source=gbs_api"
+            },
+            "language": "en",
+            "previewLink": "http:\/\/books.google.com.vn\/books?id=iFYfAQAAIAAJ&q=intitle:Frankenstein%253B%2BOr%252C%2BThe%2BModern%2BPrometheus%2Binauthor:Shelley%252C%2BMary%2BWollstonecraft&dq=intitle:Frankenstein%253B%2BOr%252C%2BThe%2BModern%2BPrometheus%2Binauthor:Shelley%252C%2BMary%2BWollstonecraft&hl=&cd=1&source=gbs_api",
+            "infoLink": "http:\/\/books.google.com.vn\/books?id=iFYfAQAAIAAJ&dq=intitle:Frankenstein%253B%2BOr%252C%2BThe%2BModern%2BPrometheus%2Binauthor:Shelley%252C%2BMary%2BWollstonecraft&hl=&source=gbs_api",
+            "canonicalVolumeLink": "https:\/\/books.google.com\/books\/about\/Frankenstein_Or_The_Modern_Prometheus.html?hl=&id=iFYfAQAAIAAJ"
+        },
+        "saleInfo": {
+            "country": "VN",
+            "saleability": "NOT_FOR_SALE",
+            "isEbook": false
+        },
+        "accessInfo": {
+            "country": "VN",
+            "viewability": "NO_PAGES",
+            "embeddable": false,
+            "publicDomain": false,
+            "textToSpeechPermission": "ALLOWED",
+            "epub": {
+                "isAvailable": false
+            },
+            "pdf": {
+                "isAvailable": false
+            },
+            "webReaderLink": "http:\/\/play.google.com\/books\/reader?id=iFYfAQAAIAAJ&hl=&source=gbs_api",
+            "accessViewStatus": "NONE",
+            "quoteSharingAllowed": false
+        },
+        "searchInfo": {
+            "textSnippet": "Originally published: London: Printed for G. and W.B. Whittaker, 1823. In 2 vols."
+        }
+    },
+    "extracted_info": {
+        "isbn": null,
+        "publisher": "Unknown Publisher",
+        "published_date": "1993",
+        "description": "Originally published: London: Printed for G. and W.B. Whittaker, 1823. In 2 vols.",
+        "page_count": 158,
+        "cover_image": "http:\/\/books.google.com\/books\/content?id=iFYfAQAAIAAJ&printsec=frontcover&img=1&zoom=1&source=gbs_api",
+        "price": 77000,
+        "categories": [
+            "Fiction"
+        ],
+        "contact_for_price": true,
+        "is_free": false,
+        "saleability": "NOT_FOR_SALE",
+        "download_links": {
+            "pdf": null,
+            "epub": null
+        },
+        "web_reader_link": "http:\/\/play.google.com\/books\/reader?id=iFYfAQAAIAAJ&hl=&source=gbs_api",
+        "access_status": "NONE"
+    }
+}

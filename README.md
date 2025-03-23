@@ -64,3 +64,43 @@ If you discover a security vulnerability within Laravel, please send an e-mail t
 ## License
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+
+## API Testing with Postman
+
+A Postman collection has been provided to help you test the API endpoints. To use it:
+
+1. Install [Postman](https://www.postman.com/downloads/) if you haven't already
+2. Import the collection from `postman/book-store.postman_collection.json`
+3. Import the environment from `postman/book-store.postman_environment.json`
+4. Select the "Book Store Local" environment from the dropdown in the top right
+5. Use the collection to test the various API endpoints
+
+The collection includes:
+- Authentication endpoints (register, login, logout)
+- Gutendex API endpoints (search books, get book details, import books)
+- Google Books API endpoints (search books, get book details, import books)
+
+### Authentication Flow
+
+1. Use the Register request to create a new account
+2. Use the Login request to obtain an access token
+3. The token will be automatically stored in the environment variable `{{authToken}}`
+4. All subsequent requests will use this token for authorization
+
+### Automated Testing
+
+For automated API testing, an additional collection is provided:
+
+1. Import the automation collection from `postman/automate-flow.postman_collection.json`
+2. Open Postman's Collection Runner (Runner button in the bottom bar)
+3. Select the "Book Store API - Automation Flow" collection
+4. Click "Run" to execute the entire testing workflow automatically
+
+The automated workflow will:
+- Register a new random test user
+- Authenticate and store the token
+- Search and import books from both Gutendex and Google Books APIs
+- Verify the imported books
+- Clean up test data and log out
+
+See `postman/README.md` for more detailed information about the test scripts.

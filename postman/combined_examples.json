@@ -1,0 +1,139 @@
+[
+  {
+    "id": 1342,
+    "title": "Pride and Prejudice",
+    "author": "Jane Austen",
+    "description": "Pride and Prejudice is a romantic novel by Jane Austen, first published in 1813. The story follows the main character Elizabeth Bennet as she deals with issues of manners, upbringing, morality, education, and marriage in the society of the landed gentry of early 19th-century England. Elizabeth is the second of five daughters of a country gentleman living near the fictional town of Meryton in Hertfordshire, near London.",
+    "image": "https://www.gutenberg.org/cache/epub/1342/pg1342.cover.medium.jpg",
+    "download_count": 49227,
+    "languages": ["en"],
+    "formats": {
+      "text/html": "https://www.gutenberg.org/files/1342/1342-h/1342-h.htm",
+      "application/epub+zip": "https://www.gutenberg.org/ebooks/1342.epub.images",
+      "application/x-mobipocket-ebook": "https://www.gutenberg.org/ebooks/1342.kindle.images",
+      "text/plain": "https://www.gutenberg.org/files/1342/1342-0.txt",
+      "application/rdf+xml": "https://www.gutenberg.org/ebooks/1342.rdf"
+    },
+    "subjects": [
+      "Courtship -- Fiction",
+      "Domestic fiction",
+      "England -- Fiction",
+      "Love stories",
+      "Sisters -- Fiction",
+      "Social classes -- Fiction",
+      "Young women -- Fiction"
+    ],
+    "bookshelves": [
+      "Best Books Ever Listings",
+      "Harvard Classics"
+    ],
+    "copyright": false,
+    "media_type": "Text",
+    "gutendex_url": "https://gutendex.com/books/1342",
+    "google_books_data": {
+      "id": "ydULEQAAQBAJ",
+      "isbn_13": "9783989956025",
+      "isbn_10": "3989956027",
+      "publisher": "Artaro",
+      "published_date": "2024-06-04",
+      "page_count": 442,
+      "description": "Pride and Prejudice is a novel of manners by Jane Austen, published in 1813. The story follows the main character Elizabeth Bennet as she deals with issues of manners, upbringing, morality, education, and marriage in the society of the landed gentry of the British Regency. The novel is set in England in the early 19th century.\n\nElizabeth Bennet is the second of five daughters of a country gentleman, living near the fictional town of Meryton in Hertfordshire, near London. Though the story is set at the turn of the 19th century, it retains a fascination for modern readers, continuing near the top of lists of 'most loved books' and still receives considerable attention from literary critics. This modern interest has resulted in a number of dramatic adaptations and an abundance of novels and stories imitating Austen's memorable characters or themes.",
+      "cover_image": "http://books.google.com/books/content?id=ydULEQAAQBAJ&printsec=frontcover&img=1&zoom=5",
+      "price": 154000,
+      "price_currency": "VND",
+      "saleability": "FREE",
+      "access_info": {
+        "is_public_domain": true,
+        "country": "VN",
+        "pdf": { 
+          "isAvailable": true, 
+          "acsTokenLink": "http://books.google.com/books/download/Pride_and_Prejudice-sample-pdf.acsm?id=ydULEQAAQBAJ&format=pdf" 
+        },
+        "epub": { 
+          "isAvailable": true, 
+          "downloadLink": "http://books.google.com/books/download/Pride_and_Prejudice.epub?id=ydULEQAAQBAJ&hl=&output=epub" 
+        }
+      }
+    },
+    "price": {
+      "amount": 154000,
+      "currency": "VND",
+      "formatted": "154.000 VND",
+      "is_free": true
+    },
+    "isbn": "9783989956025",
+    "page_count": 442,
+    "published_date": "2024-06-04",
+    "publisher": "Artaro",
+    "stock_quantity": 15
+  },
+  {
+    "id": 84,
+    "title": "Frankenstein; Or, The Modern Prometheus",
+    "author": "Mary Wollstonecraft Shelley",
+    "description": "Frankenstein; or, The Modern Prometheus is a novel written by English author Mary Shelley (1797–1851) that tells the story of Victor Frankenstein, a young scientist who creates a hideous sapient creature in an unorthodox scientific experiment.",
+    "image": "https://www.gutenberg.org/cache/epub/84/pg84.cover.medium.jpg",
+    "download_count": 14935,
+    "languages": ["en"],
+    "formats": {
+      "text/html": "https://www.gutenberg.org/files/84/84-h/84-h.htm",
+      "application/epub+zip": "https://www.gutenberg.org/ebooks/84.epub.images",
+      "application/x-mobipocket-ebook": "https://www.gutenberg.org/ebooks/84.kindle.images",
+      "text/plain": "https://www.gutenberg.org/files/84/84-0.txt",
+      "application/rdf+xml": "https://www.gutenberg.org/ebooks/84.rdf"
+    },
+    "subjects": [
+      "Horror tales",
+      "Monsters -- Fiction",
+      "Frankenstein's monster (Fictitious character) -- Fiction",
+      "Frankenstein, Victor (Fictitious character) -- Fiction",
+      "Scientists -- Fiction",
+      "Gothic fiction",
+      "Science fiction"
+    ],
+    "bookshelves": [
+      "Gothic Fiction",
+      "Movie Books",
+      "Precursors of Science Fiction",
+      "Science Fiction by Women"
+    ],
+    "copyright": false,
+    "media_type": "Text",
+    "gutendex_url": "https://gutendex.com/books/84",
+    "google_books_data": {
+      "id": "mCVXAAAAYAAJ",
+      "isbn_13": "9780486282114",
+      "isbn_10": "0486282112",
+      "publisher": "Dover Publications",
+      "published_date": "1994",
+      "page_count": 166,
+      "description": "The story of Victor Frankenstein's terrible creation and the havoc it caused has enthralled generations of readers and inspired countless writers of horror and suspense. With the author's own 1831 introduction.",
+      "cover_image": "http://books.google.com/books/content?id=mCVXAAAAYAAJ&printsec=frontcover&img=1&zoom=5",
+      "price": 83000,
+      "price_currency": "VND",
+      "saleability": "NOT_FOR_SALE",
+      "access_info": {
+        "is_public_domain": true,
+        "country": "VN",
+        "pdf": { 
+          "isAvailable": true, 
+          "downloadLink": "http://books.google.com/books/download/Frankenstein.pdf?id=mCVXAAAAYAAJ&output=pdf" 
+        },
+        "epub": { 
+          "isAvailable": false
+        }
+      }
+    },
+    "price": {
+      "amount": 83000,
+      "currency": "VND",
+      "formatted": "83.000 VND",
+      "is_free": true
+    },
+    "isbn": "9780486282114",
+    "page_count": 166,
+    "published_date": "1994",
+    "publisher": "Dover Publications",
+    "stock_quantity": 12
+  }
+] 

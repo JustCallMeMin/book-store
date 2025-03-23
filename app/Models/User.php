@@ -7,6 +7,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use PHPOpenSourceSaver\JWTAuth\Contracts\JWTSubject;
 use Illuminate\Support\Str;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class User extends Authenticatable implements JWTSubject
 {
@@ -59,5 +60,37 @@ class User extends Authenticatable implements JWTSubject
     public function roles(): BelongsToMany
     {
         return $this->belongsToMany(Role::class, 'user_roles', 'user_id', 'role_id');
+    }
+
+    /**
+     * Lấy tất cả đơn hàng của người dùng
+     */
+    public function orders(): HasMany
+    {
+        return $this->hasMany(Order::class);
+    }
+
+    /**
+     * Lấy giỏ hàng của người dùng
+     */
+    public function cart(): HasMany
+    {
+        return $this->hasMany(Cart::class);
+    }
+
+    /**
+     * Lấy tất cả đánh giá của người dùng
+     */
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(Review::class);
+    }
+
+    /**
+     * Lấy tất cả phiếu nhập do người dùng tạo
+     */
+    public function imports(): HasMany
+    {
+        return $this->hasMany(Import::class);
     }
 }

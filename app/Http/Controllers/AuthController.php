@@ -94,20 +94,6 @@ class AuthController extends Controller
     }
 
     /**
-     * Xác thực Remember Me Token
-     */
-    public function verifyRememberToken(Request $request)
-    {
-        $request->validate([
-            'email' => 'required|string|email',
-            'remember_token' => 'required|string'
-        ]);
-        return $this->handleResponse(
-            $this->authService->verifyRememberToken($request->email, $request->remember_token)
-        );
-    }
-
-    /**
      * Chuẩn hóa response API
      */
     private function handleResponse(array $result)

@@ -20,7 +20,7 @@ class GoogleBooksService
     }
 
     /**
-     * Tìm kiếm sách theo tiêu đề và tác giả
+     * Tìm kiếm thông tin sách từ Google Books API
      */
     public function searchBook(string $title, ?string $author = null)
     {
@@ -31,7 +31,7 @@ class GoogleBooksService
                 'error' => 'Google Books API key not configured'
             ];
         }
-
+        
         try {
             $query = 'intitle:' . urlencode($title);
             
@@ -40,29 +40,38 @@ class GoogleBooksService
             }
 
             $response = Http::withOptions([
-                'verify' => false,
+                'verify' => false, // Disable SSL verification
             ])->get("{$this->baseUrl}/volumes", [
                 'q' => $query,
                 'maxResults' => 1,
                 'key' => $this->apiKey
             ]);
-
+            
             if ($response->successful() && isset($response['items'][0])) {
                 return [
                     'status' => 200,
                     'data' => $response['items'][0]
                 ];
+            } else if ($response->successful()) {
+                return [
+                    'status' => 404,
+                    'error' => 'No books found matching the criteria'
+                ];
+            } else {
+                return [
+                    'status' => $response->status(),
+                    'error' => 'Failed to fetch data from Google Books API'
+                ];
             }
-
-            return [
-                'status' => 404,
-                'error' => 'Book not found in Google Books'
-            ];
         } catch (\Exception $e) {
-            Log::error('Google Books API error: ' . $e->getMessage());
+            Log::error("GoogleBooksService searchBook error: " . $e->getMessage(), [
+                'title' => $title,
+                'author' => $author
+            ]);
+            
             return [
                 'status' => 500,
-                'error' => 'Error contacting Google Books API'
+                'error' => 'Internal server error while searching books'
             ];
         }
     }
@@ -113,94 +122,70 @@ class GoogleBooksService
      */
     public function extractBookInfo(array $googleBookData)
     {
-        $volumeInfo = $googleBookData['volumeInfo'] ?? [];
-        $saleInfo = $googleBookData['saleInfo'] ?? [];
-        $accessInfo = $googleBookData['accessInfo'] ?? [];
+        if (!isset($googleBookData['volumeInfo'])) {
+            return [
+                'description' => null,
+                'publisher' => 'Unknown Publisher',
+                'published_date' => null,
+                'page_count' => null,
+                'isbn' => null,
+                'cover_image' => null,
+                'price' => null,
+                'contact_for_price' => true
+            ];
+        }
         
-        $publisher = $volumeInfo['publisher'] ?? null;
-        $publishedDate = $volumeInfo['publishedDate'] ?? null;
-        $description = $volumeInfo['description'] ?? null;
-        $pageCount = $volumeInfo['pageCount'] ?? null;
-        $categories = $volumeInfo['categories'] ?? [];
-        $imageLinks = $volumeInfo['imageLinks'] ?? [];
-        $isbn = null;
+        $volumeInfo = $googleBookData['volumeInfo'];
         
         // Lấy ISBN nếu có
+        $isbn = null;
         if (isset($volumeInfo['industryIdentifiers'])) {
             foreach ($volumeInfo['industryIdentifiers'] as $identifier) {
-                if (in_array($identifier['type'], ['ISBN_10', 'ISBN_13'])) {
+                if (isset($identifier['type']) && ($identifier['type'] === 'ISBN_13' || $identifier['type'] === 'ISBN_10')) {
                     $isbn = $identifier['identifier'];
                     break;
                 }
             }
         }
         
-        // Lấy thông tin giá
-        $price = null;
-        $currencyCode = null;
-        $contactForPrice = true;
-        $isFree = false;
-        
-        // Kiểm tra sách miễn phí
-        if (isset($saleInfo['saleability']) && $saleInfo['saleability'] === 'FREE') {
-            $isFree = true;
-            $contactForPrice = false;
-        } elseif (isset($saleInfo['listPrice'])) {
-            $price = $saleInfo['listPrice']['amount'] ?? null;
-            $currencyCode = $saleInfo['listPrice']['currencyCode'] ?? null;
-            $contactForPrice = false;
-        } elseif (isset($saleInfo['retailPrice'])) {
-            $price = $saleInfo['retailPrice']['amount'] ?? null;
-            $currencyCode = $saleInfo['retailPrice']['currencyCode'] ?? null;
-            $contactForPrice = false;
+        // Trích xuất ảnh bìa, sử dụng kích thước lớn nhất có sẵn
+        $coverImage = null;
+        if (isset($volumeInfo['imageLinks'])) {
+            $coverImage = $volumeInfo['imageLinks']['thumbnail'] ?? null;
+            $coverImage = $volumeInfo['imageLinks']['small'] ?? $coverImage;
+            $coverImage = $volumeInfo['imageLinks']['medium'] ?? $coverImage;
+            $coverImage = $volumeInfo['imageLinks']['large'] ?? $coverImage;
+            $coverImage = $volumeInfo['imageLinks']['extraLarge'] ?? $coverImage;
         }
         
-        // Nếu giá trả về bằng USD hoặc EUR, chuyển đổi sang VND
-        if ($price && $currencyCode) {
-            if ($currencyCode === 'USD') {
-                $price = $price * 24000; // Tỷ giá USD/VND
-            } elseif ($currencyCode === 'EUR') {
-                $price = $price * 26000; // Tỷ giá EUR/VND
+        // Thông tin về giá
+        $price = null;
+        $contactForPrice = true;
+        
+        // Nếu là sách miễn phí hoặc có thông tin giá bán
+        if (isset($googleBookData['saleInfo'])) {
+            $saleInfo = $googleBookData['saleInfo'];
+            
+            if (isset($saleInfo['saleability']) && $saleInfo['saleability'] === 'FOR_SALE') {
+                if (isset($saleInfo['retailPrice']) && isset($saleInfo['retailPrice']['amount'])) {
+                    $price = $saleInfo['retailPrice']['amount'];
+                    $contactForPrice = false;
+                }
+            } elseif (isset($saleInfo['saleability']) && $saleInfo['saleability'] === 'FREE') {
+                $price = 0;
+                $contactForPrice = false;
             }
         }
-
-        // Tạo giá ngẫu nhiên, bất kể trạng thái miễn phí
-        if ($pageCount) {
-            // Giá tăng theo số trang, từ 50k-250k
-            $price = min(250000, max(50000, $pageCount * 500));
-            
-            // Thêm một chút ngẫu nhiên vào giá, ± 10%
-            $variation = rand(-10, 10) / 100;
-            $price = round($price * (1 + $variation), -3); // Làm tròn đến hàng nghìn
-        } else {
-            // Nếu không có số trang, tạo giá ngẫu nhiên
-            $price = random_int(50, 200) * 1000;
-        }
-        
-        // Thông tin tải và đọc
-        $downloadLinks = [
-            'pdf' => $accessInfo['pdf']['downloadLink'] ?? null,
-            'epub' => $accessInfo['epub']['downloadLink'] ?? null,
-        ];
-        
-        $webReaderLink = $accessInfo['webReaderLink'] ?? null;
-        $accessViewStatus = $accessInfo['accessViewStatus'] ?? null;
         
         return [
+            'description' => $volumeInfo['description'] ?? null,
+            'publisher' => $volumeInfo['publisher'] ?? 'Unknown Publisher',
+            'published_date' => isset($volumeInfo['publishedDate']) ? date('Y-m-d', strtotime($volumeInfo['publishedDate'])) : null,
+            'page_count' => $volumeInfo['pageCount'] ?? null,
             'isbn' => $isbn,
-            'publisher' => $publisher ?: 'Unknown Publisher',
-            'published_date' => $publishedDate,
-            'description' => $description,
-            'page_count' => $pageCount,
-            'cover_image' => $imageLinks['thumbnail'] ?? null,
+            'cover_image' => $coverImage,
             'price' => $price,
-            'categories' => $categories,
-            'contact_for_price' => $contactForPrice,
-            'is_free' => $isFree,
-            'saleability' => $saleInfo['saleability'] ?? null,
-            'download_links' => $downloadLinks,
-            'web_reader_link' => $webReaderLink,
-            'access_status' => $accessViewStatus
+            'contact_for_price' => $contactForPrice
         ];
     }
 
@@ -235,7 +220,9 @@ class GoogleBooksService
                 $params['q'] = 'subject:fiction';
             }
 
-            $response = Http::get("{$this->baseUrl}/volumes", $params);
+            $response = Http::withOptions([
+                'verify' => false,
+            ])->get("{$this->baseUrl}/volumes", $params);
 
             if ($response->successful()) {
                 return [
@@ -244,12 +231,23 @@ class GoogleBooksService
                 ];
             }
 
+            Log::error('Google Books API search error: ' . json_encode([
+                'status' => $response->status(),
+                'body' => $response->body(),
+                'params' => $params
+            ]));
+
             return [
                 'status' => $response->status(),
                 'error' => 'Failed to search books from Google Books'
             ];
         } catch (\Exception $e) {
-            Log::error('Google Books API error: ' . $e->getMessage());
+            Log::error('Google Books API error: ' . $e->getMessage(), [
+                'query' => $query,
+                'page' => $page,
+                'perPage' => $perPage,
+                'exception' => $e
+            ]);
             return [
                 'status' => 500,
                 'error' => 'Error contacting Google Books API'
@@ -271,7 +269,9 @@ class GoogleBooksService
         }
 
         try {
-            $response = Http::get("{$this->baseUrl}/volumes/{$volumeId}", [
+            $response = Http::withOptions([
+                'verify' => false,
+            ])->get("{$this->baseUrl}/volumes/{$volumeId}", [
                 'key' => $this->apiKey
             ]);
 
@@ -281,6 +281,12 @@ class GoogleBooksService
                     'data' => $response->json()
                 ];
             }
+
+            Log::error('Google Books API getBook error: ' . json_encode([
+                'status' => $response->status(),
+                'body' => $response->body(),
+                'volumeId' => $volumeId
+            ]));
 
             return [
                 'status' => $response->status(),
@@ -461,7 +467,7 @@ class GoogleBooksService
     }
 
     /**
-     * Fallback khi không có Google Books API key
+     * Kiểm tra xem có API key cho Google Books không
      */
     public function hasFallback()
     {

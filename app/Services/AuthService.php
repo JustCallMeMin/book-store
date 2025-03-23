@@ -122,20 +122,17 @@ class AuthService
             return ['error' => 'User not found after login', 'status' => 404];
         }
 
-        // Nếu chọn "Remember Me", tạo token mới và lưu
-        $rememberToken = null;
+        // Cập nhật trường remember_me trong database
+        $user->remember_me = $remember;
+        
+        // Nếu chọn "Remember Me", tăng thời gian sống của JWT token (30 ngày)
         if ($remember) {
-            // Tăng thời gian sống của JWT token nếu remember=true (30 ngày thay vì 1 giờ)
-            auth('api')->factory()->setTTL(60 * 24 * 30);
-            
-            $rememberToken = Str::random(60);
-            $user->remember_token = Hash::make($rememberToken);
-            $user->remember_token_expires_at = now()->addDays(30); // Token có hạn 30 ngày
-            $user->save();
-            
-            // Tạo token mới với TTL dài hạn
+            auth('api')->factory()->setTTL(60 * 24 * 30); // 30 ngày
+            // Refresh token với TTL mới
             $token = auth('api')->refresh();
         }
+        
+        $user->save();
 
         return [
             'message' => 'User successfully logged in',
@@ -143,44 +140,18 @@ class AuthService
             'access_token' => $token,
             'token_type' => 'bearer',
             'expires_in' => auth('api')->factory()->getTTL() * 60, // Chuyển từ phút sang giây
-            'remember_token' => $rememberToken,
             'status' => 200
         ];
     }
 
     /**
-     * Xác thực Remember Token để đăng nhập lại
-     */
-    public function verifyRememberToken($email, $rememberToken): array
-    {
-        $user = User::with('roles')->where('email', $email)->first();
-
-        if (!$user) {
-            return ['error' => 'User not found', 'status' => 404];
-        }
-
-        // Kiểm tra token có hết hạn không
-        if (!$user->remember_token_expires_at || now()->greaterThan($user->remember_token_expires_at)) {
-            return ['error' => 'Remember token expired', 'status' => 401];
-        }
-
-        // Kiểm tra token hợp lệ
-        if (!Hash::check($rememberToken, $user->remember_token)) {
-            return ['error' => 'Invalid remember token', 'status' => 401];
-        }
-
-        return $this->generateAuthResponse($user, 'User successfully authenticated via remember token', 200);
-    }
-
-    /**
-     * Đăng xuất người dùng và xóa Remember Token
+     * Đăng xuất người dùng
      */
     public function logout(): array
     {
         $user = auth('api')->user();
         if ($user) {
-            $user->remember_token = null;
-            $user->remember_token_expires_at = null;
+            $user->remember_me = false;
             $user->save();
         }
         auth('api')->logout();
@@ -343,24 +314,21 @@ class AuthService
      */
     private function generateAuthResponse(User $user, string $message, int $status, bool $remember = false): array
     {
-        $rememberToken = null;
-        $rememberTokenExpire = null;
+        // Nếu chọn remember me, tăng TTL của JWT lên 30 ngày
         if ($remember) {
-            $rememberToken = Str::random(60);
-            $user->remember_token = Hash::make($rememberToken);
-            $rememberTokenExpire = now()->addDays(30);
-            $user->remember_token_expires_at = $rememberTokenExpire;
+            auth('api')->factory()->setTTL(60 * 24 * 30); // 30 ngày
+            $user->remember_me = true;
             $user->save();
         }
+        
         $token = JWTAuth::claims($user->getJWTCustomClaims())->fromUser($user);
+        
         return [
             'message' => $message,
             'user' => new UserResource($user),
             'access_token' => $token,
             'token_type' => 'bearer',
-            'expires_in' => $remember ? null : auth('api')->factory()->getTTL() * 60,
-            'remember_token' => $rememberToken,
-            'remember_token_expire' => $rememberTokenExpire,
+            'expires_in' => auth('api')->factory()->getTTL() * 60, // Chuyển từ phút sang giây
             'status' => $status
         ];
     }

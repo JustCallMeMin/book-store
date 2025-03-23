@@ -128,6 +128,93 @@
 					"response": []
 				},
 				{
+					"name": "Login as Admin",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Parse response body",
+									"var jsonData = pm.response.json();",
+									"",
+									"// Check if response is successful and contains access_token",
+									"if (pm.response.code === 200 && jsonData.access_token) {",
+									"    // Set the authentication token as environment variable",
+									"    pm.environment.set('adminToken', jsonData.access_token);",
+									"    console.log('Admin token saved to environment variable');",
+									"    ",
+									"    // Optional: Set the expiration time if returned by the API",
+									"    if (jsonData.expires_in) {",
+									"        var expiryDate = new Date();",
+									"        expiryDate.setSeconds(expiryDate.getSeconds() + jsonData.expires_in);",
+									"        pm.environment.set('adminTokenExpiry', expiryDate.getTime());",
+									"    }",
+									"}",
+									"",
+									"// Test assertions",
+									"pm.test('Status code is 200', function() {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response contains access token', function() {",
+									"    pm.expect(jsonData).to.have.property('access_token');",
+									"});",
+									"",
+									"pm.test('User has Admin role', function() {",
+									"    pm.expect(jsonData.user.roles).to.be.an('array');",
+									"    const hasAdminRole = jsonData.user.roles.some(role => role.name === 'Admin');",
+									"    pm.expect(hasAdminRole).to.be.true;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"// Admin credentials",
+									"pm.environment.set('adminEmail', 'admin@example.com');",
+									"pm.environment.set('adminPassword', 'Password123!');",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"{{adminEmail}}\",\n    \"password\": \"{{adminPassword}}\",\n    \"remember\": true\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"login"
+							]
+						},
+						"description": "Login as Admin user to access protected resources"
+					},
+					"response": []
+				},
+				{
 					"name": "Logout",
 					"request": {
 						"auth": {
@@ -159,6 +246,181 @@
 							]
 						},
 						"description": "Logout and invalidate the token"
+					},
+					"response": []
+				},
+				{
+					"name": "Admin Logout",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{adminToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/logout",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"logout"
+							]
+						},
+						"description": "Logout admin user and invalidate the token"
+					},
+					"response": []
+				},
+				{
+					"name": "Refresh Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Parse response body",
+									"var jsonData = pm.response.json();",
+									"",
+									"// Check if response is successful and contains access_token",
+									"if (pm.response.code === 200 && jsonData.access_token) {",
+									"    // Set the authentication token as environment variable",
+									"    pm.environment.set('authToken', jsonData.access_token);",
+									"    console.log('Auth token refreshed and saved to environment variable');",
+									"    ",
+									"    // Optional: Set the expiration time if returned by the API",
+									"    if (jsonData.expires_in) {",
+									"        var expiryDate = new Date();",
+									"        expiryDate.setSeconds(expiryDate.getSeconds() + jsonData.expires_in);",
+									"        pm.environment.set('tokenExpiry', expiryDate.getTime());",
+									"    }",
+									"}",
+									"",
+									"// Test assertions",
+									"pm.test('Status code is 200', function() {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response contains refreshed access token', function() {",
+									"    pm.expect(jsonData).to.have.property('access_token');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{authToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/refresh",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"refresh"
+							]
+						},
+						"description": "Refresh the JWT token when it's about to expire"
+					},
+					"response": []
+				},
+				{
+					"name": "Refresh Admin Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Parse response body",
+									"var jsonData = pm.response.json();",
+									"",
+									"// Check if response is successful and contains access_token",
+									"if (pm.response.code === 200 && jsonData.access_token) {",
+									"    // Set the authentication token as environment variable",
+									"    pm.environment.set('adminToken', jsonData.access_token);",
+									"    console.log('Admin token refreshed and saved to environment variable');",
+									"    ",
+									"    // Optional: Set the expiration time if returned by the API",
+									"    if (jsonData.expires_in) {",
+									"        var expiryDate = new Date();",
+									"        expiryDate.setSeconds(expiryDate.getSeconds() + jsonData.expires_in);",
+									"        pm.environment.set('adminTokenExpiry', expiryDate.getTime());",
+									"    }",
+									"}",
+									"",
+									"// Test assertions",
+									"pm.test('Status code is 200', function() {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response contains refreshed access token', function() {",
+									"    pm.expect(jsonData).to.have.property('access_token');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{adminToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/refresh",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"refresh"
+							]
+						},
+						"description": "Refresh the admin JWT token when it's about to expire"
 					},
 					"response": []
 				},
@@ -402,7 +664,7 @@
 								"1342"
 							]
 						},
-						"description": "Get details of a specific book by ID (1342 = Pride and Prejudice)"
+						"description": "Get details of a specific book by ID"
 					},
 					"response": []
 				},
@@ -565,21 +827,61 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"book_ids\": [1342, 84, 46, 1260, 2701]\n}"
+							"raw": "{\n    \"book_ids\": [1342, 84, 11, 2701, 1661]\n}"
 						},
 						"url": {
-							"raw": "{{baseUrl}}/api/gutendex/books/bulk-import",
+							"raw": "{{baseUrl}}/api/gutendex/bulk-import",
 							"host": [
 								"{{baseUrl}}"
 							],
 							"path": [
 								"api",
 								"gutendex",
-								"books",
 								"bulk-import"
 							]
 						},
 						"description": "Import multiple books from Gutendex at once"
+					},
+					"response": []
+				},
+				{
+					"name": "Import All Books (Admin)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{adminToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/gutendex/import-all-books",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"gutendex",
+								"import-all-books"
+							]
+						},
+						"description": "Admin only endpoint to import all books from Gutendex API"
 					},
 					"response": []
 				},
@@ -678,7 +980,7 @@
 							}
 						],
 						"url": {
-							"raw": "{{baseUrl}}/api/gutendex/authors/1/books",
+							"raw": "{{baseUrl}}/api/gutendex/authors/100/books",
 							"host": [
 								"{{baseUrl}}"
 							],
@@ -686,11 +988,11 @@
 								"api",
 								"gutendex",
 								"authors",
-								"1",
+								"100",
 								"books"
 							]
 						},
-						"description": "Get books by a specific author (ID 1)"
+						"description": "Get books by a specific author (ID 100)"
 					},
 					"response": []
 				},
@@ -770,348 +1072,6 @@
 				}
 			],
 			"description": "API endpoints for interacting with Gutendex books"
-		},
-		{
-			"name": "Google Books",
-			"item": [
-				{
-					"name": "Search Books",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test(\"Status code is 200\", function() {",
-									"    pm.response.to.have.status(200);",
-									"});",
-									"",
-									"pm.test(\"Response contains books\", function() {",
-									"    const jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property('items');",
-									"    pm.expect(jsonData.items).to.be.an('array');",
-									"    ",
-									"    // Store the first Google book ID for other tests",
-									"    if (jsonData.items && jsonData.items.length > 0) {",
-									"        pm.environment.set('googleBookId', jsonData.items[0].id);",
-									"        console.log('Google Book ID saved: ' + jsonData.items[0].id);",
-									"    }",
-									"});"
-								],
-								"type": "text/javascript"
-							}
-						},
-						{
-							"listen": "prerequest",
-							"script": {
-								"exec": [
-									"// Set default search query if not provided",
-									"if (!pm.variables.get('googleSearchQuery')) {",
-									"    pm.variables.set('googleSearchQuery', 'pride and prejudice');",
-									"}"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{authToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "GET",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/api/google-books?q={{googleSearchQuery}}&page=1&per_page=10",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"google-books"
-							],
-							"query": [
-								{
-									"key": "q",
-									"value": "{{googleSearchQuery}}"
-								},
-								{
-									"key": "page",
-									"value": "1"
-								},
-								{
-									"key": "per_page",
-									"value": "10"
-								}
-							]
-						},
-						"description": "Search for books on Google Books API"
-					},
-					"response": []
-				},
-				{
-					"name": "Get Book Details",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test(\"Status code is 200\", function() {",
-									"    pm.response.to.have.status(200);",
-									"});",
-									"",
-									"pm.test(\"Book has required fields\", function() {",
-									"    const jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property('id');",
-									"    pm.expect(jsonData).to.have.property('volumeInfo');",
-									"    pm.expect(jsonData.volumeInfo).to.have.property('title');",
-									"});"
-								],
-								"type": "text/javascript"
-							}
-						},
-						{
-							"listen": "prerequest",
-							"script": {
-								"exec": [
-									"// Use the stored Google Book ID from the search test",
-									"const bookId = pm.environment.get('googleBookId');",
-									"if (bookId) {",
-									"    pm.variables.set('currentGoogleBookId', bookId);",
-									"}"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{authToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "GET",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/api/google-books/{{currentGoogleBookId}}",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"google-books",
-								"{{currentGoogleBookId}}"
-							]
-						},
-						"description": "Get details of a specific book by Google Books ID"
-					},
-					"response": []
-				},
-				{
-					"name": "Import Book",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test(\"Status code is 201\", function() {",
-									"    pm.response.to.have.status(201);",
-									"});",
-									"",
-									"pm.test(\"Book was imported successfully\", function() {",
-									"    const jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property('message');",
-									"    pm.expect(jsonData.message).to.include('imported');",
-									"});"
-								],
-								"type": "text/javascript"
-							}
-						},
-						{
-							"listen": "prerequest",
-							"script": {
-								"exec": [
-									"// Use the stored Google Book ID",
-									"const bookId = pm.environment.get('googleBookId');",
-									"if (bookId) {",
-									"    pm.variables.set('currentGoogleBookId', bookId);",
-									"}"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{authToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "POST",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/api/google-books/{{currentGoogleBookId}}/import",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"google-books",
-								"{{currentGoogleBookId}}",
-								"import"
-							]
-						},
-						"description": "Import a book from Google Books into local database"
-					},
-					"response": []
-				},
-				{
-					"name": "Bulk Import Books",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{authToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "POST",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"book_ids\": [\"{{currentGoogleBookId}}\"]\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/google-books/bulk-import",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"google-books",
-								"bulk-import"
-							]
-						},
-						"description": "Import multiple books from Google Books at once"
-					},
-					"response": []
-				},
-				{
-					"name": "Search by ISBN",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test(\"Status code is 200\", function() {",
-									"    pm.response.to.have.status(200);",
-									"});",
-									"",
-									"pm.test(\"ISBN search successful\", function() {",
-									"    const jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property('id');",
-									"    pm.expect(jsonData).to.have.property('volumeInfo');",
-									"    ",
-									"    // Save the found book ID",
-									"    pm.environment.set('isbnBookId', jsonData.id);",
-									"});"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{authToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "POST",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"isbn\": \"{{isbn}}\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/google-books/search-by-isbn",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"google-books",
-								"search-by-isbn"
-							]
-						},
-						"description": "Search for a book by ISBN"
-					},
-					"response": []
-				}
-			],
-			"description": "API endpoints for interacting with Google Books API"
 		}
 	],
 	"event": [
@@ -1161,6 +1121,21 @@
 			"key": "authToken",
 			"value": "YOUR_ACCESS_TOKEN_HERE",
 			"type": "string"
+		},
+		{
+			"key": "adminToken",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "adminEmail",
+			"value": "admin@example.com",
+			"type": "string"
+		},
+		{
+			"key": "adminPassword", 
+			"value": "Password123!",
+			"type": "string"
 		}
 	]
-} 
+}

@@ -21,26 +21,51 @@ class GutendexService
     /**
      * Lấy danh sách sách từ Gutendex API
      */
-    public function getBooks(?string $search = null, int $page = 1)
+    public function getBooks(?string $search = null, int $page = 1, int $timeout = 30)
     {
-        $response = Http::withOptions([
-            'verify' => false,
-        ])->get("{$this->baseUrl}/books", [
-            'search' => $search,
-            'page' => $page
-        ]);
+        try {
+            $response = Http::withOptions([
+                'verify' => false, // Disable SSL verification
+                'timeout' => $timeout, // Timeout tuỳ chỉnh
+                'connect_timeout' => $timeout, // Timeout kết nối
+            ])->get("{$this->baseUrl}/books", [
+                'search' => $search,
+                'page' => $page
+            ]);
 
-        if ($response->successful()) {
+            if ($response->successful()) {
+                return [
+                    'status' => 200,
+                    'data' => $response->json()
+                ];
+            }
+
+            // Log chi tiết lỗi từ API
+            \Illuminate\Support\Facades\Log::error('Gutendex API error', [
+                'status_code' => $response->status(),
+                'url' => "{$this->baseUrl}/books",
+                'params' => ['search' => $search, 'page' => $page],
+                'response_body' => $response->body()
+            ]);
+
             return [
-                'status' => 200,
-                'data' => $response->json()
+                'status' => $response->status(),
+                'error' => 'Failed to fetch books from Gutendex: ' . $response->body()
+            ];
+        } catch (\Exception $e) {
+            // Log chi tiết exception
+            \Illuminate\Support\Facades\Log::error('Exception in Gutendex API call', [
+                'url' => "{$this->baseUrl}/books",
+                'params' => ['search' => $search, 'page' => $page],
+                'exception' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return [
+                'status' => 500,
+                'error' => 'Exception during Gutendex API call: ' . $e->getMessage()
             ];
         }
-
-        return [
-            'status' => $response->status(),
-            'error' => 'Failed to fetch books from Gutendex'
-        ];
     }
 
     /**
@@ -110,38 +135,14 @@ class GutendexService
                 $coverImage = $bookDetails['formats']['image/jpeg'];
             }
 
-            // Xác định giá bán và thông báo liên hệ
-            $price = null;
+            // Đảm bảo luôn có giá sách - 10% sách miễn phí
+            $makeBookFree = mt_rand(0, 9) === 0; // 10% chance for free books
+            $price = !empty($additionalInfo['price']) ? $additionalInfo['price'] : ($makeBookFree ? 0 : random_int(50, 200) * 1000);
             $priceNote = null;
-
-            if (!empty($additionalInfo['price'])) {
-                $price = $additionalInfo['price'];
-                $priceNote = null;
-            } else if ($additionalInfo['contact_for_price'] ?? true) {
-                // Nếu cần liên hệ để biết giá
-                $price = 0; // Giá 0 để biểu thị cần liên hệ
-                
-                // Tạo thông báo liên hệ
-                $contactInfo = [];
-                if (!empty($additionalInfo['publisher']) && $additionalInfo['publisher'] !== 'Unknown Publisher') {
-                    $contactInfo[] = "publisher ({$additionalInfo['publisher']})";
-                }
-                
-                // Tìm tác giả đầu tiên nếu có
-                $authorName = isset($bookDetails['authors'][0]) ? $bookDetails['authors'][0]['name'] : null;
-                if (!empty($authorName)) {
-                    $contactInfo[] = "author ($authorName)";
-                }
-                
-                if (!empty($contactInfo)) {
-                    $priceNote = "Please contact " . implode(" or ", $contactInfo) . " for pricing information.";
-                } else {
-                    $priceNote = "Please contact the publisher for pricing information.";
-                }
-            } else {
-                // Nếu không có thông tin giá và không yêu cầu liên hệ
-                $price = 0;
-                $priceNote = "Price information not available.";
+            
+            // Nếu sách miễn phí (giá 0), thêm ghi chú
+            if ($price == 0) {
+                $priceNote = 'Sách miễn phí';
             }
 
             // Lưu thông tin sách với các trường mới
@@ -172,17 +173,31 @@ class GutendexService
                 'is_active' => true
             ]);
 
-            // Lưu thông tin tác giả
-            foreach ($bookDetails['authors'] as $authorData) {
+            // Lưu thông tin tác giả - Đã được sửa để đảm bảo tác giả luôn được tạo
+            if (!empty($bookDetails['authors'])) {
+                foreach ($bookDetails['authors'] as $authorData) {
+                    // Tạo một unique ID nếu không có sẵn
+                    $authorId = $authorData['id'] ?? md5($authorData['name']);
+                    
+                    // Tạo hoặc cập nhật tác giả
+                    $author = Author::firstOrCreate(
+                        ['gutendex_id' => $authorId],
+                        [
+                            'name' => $authorData['name'],
+                            'birth_year' => $authorData['birth_year'] ?? null,
+                            'death_year' => $authorData['death_year'] ?? null
+                        ]
+                    );
+                    
+                    // Đảm bảo liên kết đến sách
+                    $book->authors()->attach($author->id);
+                }
+            } else {
+                // Nếu không có thông tin tác giả, tạo tác giả "Unknown"
                 $author = Author::firstOrCreate(
-                    ['gutendex_id' => $authorData['id']],
-                    [
-                        'name' => $authorData['name'],
-                        'birth_year' => $authorData['birth_year'],
-                        'death_year' => $authorData['death_year']
-                    ]
+                    ['name' => 'Unknown Author'],
+                    ['gutendex_id' => 0]
                 );
-
                 $book->authors()->attach($author->id);
             }
 
@@ -220,6 +235,12 @@ class GutendexService
                 }
             }
 
+            // Nếu sau tất cả, sách vẫn chưa có category nào, thêm category "Uncategorized"
+            if ($book->categories()->count() === 0) {
+                $category = Category::firstOrCreate(['name' => 'Uncategorized']);
+                $book->categories()->attach($category->id);
+            }
+
             DB::commit();
 
             return [
@@ -249,7 +270,8 @@ class GutendexService
             'description' => '',
             'page_count' => null,
             'cover_image' => null,
-            'price' => random_int(50, 200) * 1000,
+            'price' => mt_rand(0, 10) === 0 ? 0 : random_int(50, 200) * 1000, // 10% chance to be free
+            'contact_for_price' => false,
             'categories' => []
         ];
 
@@ -304,7 +326,9 @@ class GutendexService
     public function getAuthors(?string $search = null, int $page = 1)
     {
         // Gutendex không có API riêng cho tác giả, nên chúng ta lấy sách và trích xuất tác giả
-        $response = Http::get("{$this->baseUrl}/books", [
+        $response = Http::withOptions([
+            'verify' => false,
+        ])->get("{$this->baseUrl}/books", [
             'search' => $search,
             'page' => $page
         ]);
@@ -338,9 +362,11 @@ class GutendexService
     /**
      * Lấy danh sách sách theo tác giả từ Gutendex API
      */
-    public function getBooksByAuthor(int $authorId)
+    public function getBooksByAuthor(mixed $authorId)
     {
-        $response = Http::get("{$this->baseUrl}/books", [
+        $response = Http::withOptions([
+            'verify' => false,
+        ])->get("{$this->baseUrl}/books", [
             'author_id' => $authorId
         ]);
 
@@ -386,29 +412,20 @@ class GutendexService
             // Tìm thông tin bổ sung từ Google Books API
             $additionalInfo = $this->getAdditionalBookInfo($bookDetails);
             
-            // Xác định giá bán và thông báo liên hệ nếu đã thay đổi
+            // Cập nhật giá nếu cần - đảm bảo luôn có giá
             $price = $book->price;
-            $priceNote = $book->price_note;
-            
-            if (!empty($additionalInfo['price']) && $additionalInfo['price'] != $book->price) {
+            if (!empty($additionalInfo['price'])) {
                 $price = $additionalInfo['price'];
-                $priceNote = null;
-            } else if ($book->price == 0 && ($additionalInfo['contact_for_price'] ?? true)) {
-                // Cập nhật thông báo liên hệ nếu cần
-                $contactInfo = [];
-                if (!empty($additionalInfo['publisher']) && $additionalInfo['publisher'] !== 'Unknown Publisher') {
-                    $contactInfo[] = "publisher ({$additionalInfo['publisher']})";
-                }
-                
-                // Tìm tác giả đầu tiên nếu có
-                $authorName = isset($bookDetails['authors'][0]) ? $bookDetails['authors'][0]['name'] : null;
-                if (!empty($authorName)) {
-                    $contactInfo[] = "author ($authorName)";
-                }
-                
-                if (!empty($contactInfo)) {
-                    $priceNote = "Please contact " . implode(" or ", $contactInfo) . " for pricing information.";
-                }
+            } else if ($book->price == 0 || $book->price === null) {
+                // Nếu giá là 0 hoặc null, có 10% khả năng để sách miễn phí
+                $makeBookFree = mt_rand(0, 9) === 0; // 10% chance for free books
+                $price = $makeBookFree ? 0 : random_int(50, 200) * 1000;
+            }
+            
+            // Nếu sách miễn phí (giá 0), thêm ghi chú
+            $priceNote = null;
+            if ($price == 0) {
+                $priceNote = 'Sách miễn phí';
             }
 
             // Cập nhật thông tin sách 
@@ -427,6 +444,57 @@ class GutendexService
                 'price' => $price,
                 'price_note' => $priceNote,
             ]);
+
+            // Cập nhật thông tin tác giả
+            if (!empty($bookDetails['authors'])) {
+                // Xóa các liên kết tác giả cũ
+                $book->authors()->detach();
+                
+                foreach ($bookDetails['authors'] as $authorData) {
+                    // Tạo một unique ID nếu không có sẵn
+                    $authorId = $authorData['id'] ?? md5($authorData['name']);
+                    
+                    // Tạo hoặc cập nhật tác giả
+                    $author = Author::firstOrCreate(
+                        ['gutendex_id' => $authorId],
+                        [
+                            'name' => $authorData['name'],
+                            'birth_year' => $authorData['birth_year'] ?? null,
+                            'death_year' => $authorData['death_year'] ?? null
+                        ]
+                    );
+                    
+                    // Liên kết tác giả với sách
+                    $book->authors()->attach($author->id);
+                }
+            } else if ($book->authors()->count() === 0) {
+                // Nếu không có thông tin tác giả và sách chưa có tác giả nào, tạo tác giả "Unknown"
+                $author = Author::firstOrCreate(
+                    ['name' => 'Unknown Author'],
+                    ['gutendex_id' => 0]
+                );
+                $book->authors()->attach($author->id);
+            }
+            
+            // Cập nhật categories nếu cần
+            if ($book->categories()->count() === 0) {
+                // Nếu sách chưa có category nào, thêm từ subjects hoặc bookshelves
+                if (!empty($bookDetails['subjects'])) {
+                    foreach ($bookDetails['subjects'] as $subjectName) {
+                        $category = Category::firstOrCreate(['name' => $subjectName]);
+                        $book->categories()->attach($category->id);
+                    }
+                } else if (!empty($bookDetails['bookshelves'])) {
+                    foreach ($bookDetails['bookshelves'] as $bookshelfName) {
+                        $category = Category::firstOrCreate(['name' => $bookshelfName]);
+                        $book->categories()->attach($category->id);
+                    }
+                } else {
+                    // Nếu vẫn không có category nào, thêm "Uncategorized"
+                    $category = Category::firstOrCreate(['name' => 'Uncategorized']);
+                    $book->categories()->attach($category->id);
+                }
+            }
 
             DB::commit();
 
@@ -475,5 +543,114 @@ class GutendexService
             'message' => 'Bulk import completed',
             'data' => $results
         ];
+    }
+
+    /**
+     * Tìm kiếm sách trong Gutendex theo tiêu đề và tác giả
+     * Hữu ích cho việc tìm sách tương đương giữa Google Books và Gutendex
+     */
+    public function findBookByTitleAndAuthor(string $title, ?string $author = null)
+    {
+        // Xây dựng query tìm kiếm
+        $searchQuery = $title;
+        if ($author) {
+            $searchQuery .= ' ' . $author;
+        }
+        
+        $response = Http::withOptions([
+            'verify' => false,
+        ])->get("{$this->baseUrl}/books", [
+            'search' => $searchQuery
+        ]);
+
+        if (!$response->successful()) {
+            return [
+                'status' => $response->status(),
+                'error' => 'Failed to search books from Gutendex'
+            ];
+        }
+        
+        $data = $response->json();
+        
+        // Nếu không có kết quả
+        if (empty($data['results'])) {
+            return [
+                'status' => 404,
+                'error' => 'No matching books found in Gutendex'
+            ];
+        }
+        
+        // Tìm kết quả phù hợp nhất dựa trên tiêu đề và tác giả
+        $bestMatch = null;
+        $highestScore = 0;
+        
+        foreach ($data['results'] as $book) {
+            $score = $this->calculateMatchScore($book, $title, $author);
+            
+            if ($score > $highestScore) {
+                $highestScore = $score;
+                $bestMatch = $book;
+            }
+        }
+        
+        // Nếu điểm khớp quá thấp, có thể sách không thực sự khớp
+        if ($highestScore < 0.5) {
+            return [
+                'status' => 404,
+                'error' => 'No sufficiently matching books found in Gutendex'
+            ];
+        }
+        
+        return [
+            'status' => 200,
+            'data' => $bestMatch,
+            'match_score' => $highestScore
+        ];
+    }
+    
+    /**
+     * Tính điểm khớp giữa sách Gutendex và tiêu đề/tác giả đã cho
+     */
+    private function calculateMatchScore(array $gutendexBook, string $title, ?string $author = null)
+    {
+        $score = 0;
+        
+        // So sánh tiêu đề (chiếm 70% điểm)
+        $titleSimilarity = $this->calculateStringSimilarity($gutendexBook['title'], $title);
+        $score += $titleSimilarity * 0.7;
+        
+        // So sánh tác giả nếu có (chiếm 30% điểm)
+        if ($author && !empty($gutendexBook['authors'])) {
+            $authorSimilarity = 0;
+            
+            foreach ($gutendexBook['authors'] as $bookAuthor) {
+                $currentSimilarity = $this->calculateStringSimilarity($bookAuthor['name'], $author);
+                $authorSimilarity = max($authorSimilarity, $currentSimilarity);
+            }
+            
+            $score += $authorSimilarity * 0.3;
+        }
+        
+        return $score;
+    }
+    
+    /**
+     * Tính độ tương đồng giữa hai chuỗi (0-1)
+     */
+    private function calculateStringSimilarity(string $str1, string $str2)
+    {
+        $str1 = strtolower(trim($str1));
+        $str2 = strtolower(trim($str2));
+        
+        if ($str1 === $str2) {
+            return 1.0;
+        }
+        
+        // Sử dụng Levenshtein distance để tính toán độ tương đồng
+        $levenshtein = levenshtein($str1, $str2);
+        $maxLength = max(strlen($str1), strlen($str2));
+        
+        // Chuyển đổi khoảng cách thành điểm tương đồng (1 - normalized_distance)
+        return 1 - ($levenshtein / $maxLength);
     }
 } 

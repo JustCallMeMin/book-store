@@ -41,6 +41,7 @@ return [
             'queue' => env('DB_QUEUE', 'default'),
             'retry_after' => (int) env('DB_QUEUE_RETRY_AFTER', 90),
             'after_commit' => false,
+            'timeout' => env('QUEUE_WORKER_TIMEOUT', 60),
         ],
 
         'beanstalkd' => [
@@ -107,6 +108,20 @@ return [
         'driver' => env('QUEUE_FAILED_DRIVER', 'database-uuids'),
         'database' => env('DB_CONNECTION', 'sqlite'),
         'table' => 'failed_jobs',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Queue Connection Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Set specific configurations for driver-based queue connections
+    |
+    */
+    'configuration' => [
+        'database' => [
+            'timeout' => env('QUEUE_WORKER_TIMEOUT', 60),
+        ],
     ],
 
 ];

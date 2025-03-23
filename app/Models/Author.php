@@ -19,7 +19,8 @@ class Author extends Model
 
     protected $casts = [
         'birth_year' => 'integer',
-        'death_year' => 'integer'
+        'death_year' => 'integer',
+        'gutendex_id' => 'string'
     ];
 
     /**

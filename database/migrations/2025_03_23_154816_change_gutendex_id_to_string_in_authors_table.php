@@ -11,8 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('books', function (Blueprint $table) {
-            $table->string('google_books_id')->nullable()->after('gutendex_id')->comment('ID sách từ Google Books API');
+        Schema::table('authors', function (Blueprint $table) {
+            $table->string('gutendex_id', 64)->change();
         });
     }
 
@@ -21,8 +21,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('books', function (Blueprint $table) {
-            $table->dropColumn('google_books_id');
+        Schema::table('authors', function (Blueprint $table) {
+            $table->unsignedBigInteger('gutendex_id')->change();
         });
     }
 };

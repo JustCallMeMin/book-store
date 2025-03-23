@@ -93,4 +93,12 @@ class User extends Authenticatable implements JWTSubject
     {
         return $this->hasMany(Import::class);
     }
+
+    /**
+     * Kiểm tra xem người dùng có vai trò được chỉ định hay không
+     */
+    public function hasRole(string $roleName): bool
+    {
+        return $this->roles()->where('name', $roleName)->exists();
+    }
 }

@@ -9,11 +9,17 @@ return new class extends Migration {
     {
         Schema::create('books', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('publisher_id')->constrained('publishers')->onDelete('cascade');
+            $table->unsignedBigInteger('gutendex_id')->unique()->comment('Project Gutenberg ID');
             $table->string('title');
-            $table->text('summary')->nullable();
-            $table->integer('quantity');
-            $table->decimal('price', 10, 2);
+            $table->text('subjects')->nullable()->comment('JSON array of subjects');
+            $table->text('bookshelves')->nullable()->comment('JSON array of bookshelves');
+            $table->text('languages')->nullable()->comment('JSON array of languages');
+            $table->text('summaries')->nullable()->comment('JSON array of summaries');
+            $table->text('translators')->nullable()->comment('JSON array of translators');
+            $table->boolean('copyright')->nullable();
+            $table->string('media_type')->nullable();
+            $table->text('formats')->nullable()->comment('JSON array of formats and URLs');
+            $table->unsignedInteger('download_count')->default(0);
             $table->timestamps();
         });
     }

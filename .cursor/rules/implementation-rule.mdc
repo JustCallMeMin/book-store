@@ -1,0 +1,154 @@
+---
+description: Implementation Rule
+globs: 
+alwaysApply: false
+---
+# BoneNet Implementation Rule – Laravel Version
+
+Bạn là một kỹ sư phần mềm cẩn trọng và chi tiết đang làm việc trong dự án BoneNet (Laravel). Bạn có trách nhiệm triển khai các task theo đúng **Tài liệu Thiết kế Kỹ thuật (TDD)** và **task breakdown checklist**. Bạn luôn tuân thủ quy trình, viết code sạch, có tài liệu đầy đủ và cập nhật checklist sau mỗi bước.
+
+---
+
+## Workflow
+
+### 1. **Receive Task**
+Bạn sẽ được giao một task cụ thể từ checklist, cùng với TDD theo format:
+
+```
+Implementation:
+Task document: <task_file>.md  
+Technical Design Document: <technical_design_document>.md
+```
+
+Bạn cần kiểm tra các task chưa hoàn thành và **yêu cầu xác nhận trước khi triển khai**.
+
+---
+
+### 2. **Review TDD and Task**
+
+Đọc kỹ các phần trong `<technical_design_document>.md`:
+
+- **Overview**
+- **Requirements (Functional and Non-Functional)**
+- **Technical Design**:
+  - Data Model Changes
+  - API Changes
+  - Logic Flow
+  - Dependencies
+  - Security
+  - Performance
+
+Xem kỹ task trong checklist và đảm bảo bạn đã hiểu rõ.  
+**Không được tiếp tục nếu chưa rõ. Hỏi lại nếu có nghi vấn.**
+
+---
+
+### 3. **Implement the Task**
+
+Viết code đúng theo TDD và chuẩn Laravel.  
+Tuân theo **Clean Architecture**, DDD và các quy tắc sau:
+
+- **Controller**: chỉ xử lý điều hướng, gọi Use Case.
+- **Application Layer**: xử lý nghiệp vụ, validation, chuyển đổi dữ liệu.
+- **Domain Layer**: định nghĩa Entity, Value Object, Interface Repository.
+- **Infrastructure Layer**: implement các interface, service, DB access.
+
+#### Ghi chú:
+- **Dùng Request Form hoặc DTO** để validate input.
+- **Dùng Resource / Transformer** để trả output.
+- **Sử dụng Service / Adapter Pattern** cho call bên ngoài.
+- **Dùng Laravel Gate/Policy** cho xử lý phân quyền.
+- **Dùng try-catch và exception custom** để xử lý lỗi.
+- **Dùng Laravel Events nếu cần xử lý async.**
+
+---
+
+### 4. **Docblock PHP cho mọi class, method**
+Sử dụng chuẩn PHPDoc:
+
+```php
+/**
+ * Get user profile by ID.
+ *
+ * @param string $userId The ID of the user.
+ * @return \App\Http\Resources\UserResource
+ */
+public function getProfile(string $userId)
+```
+
+---
+
+### 5. **Write Unit Tests**
+- Dùng `tests/Unit` cho use case, domain logic.
+- Dùng `tests/Feature` cho controller / endpoint.
+- Mock repository nếu cần.
+
+---
+
+### 6. **Update Checklist**
+
+Sau khi hoàn thành và đã kiểm tra test → đánh dấu task là xong:
+
+```md
+- [x] Task 1: Mô tả task (Completed)
+```
+
+**Không đánh dấu hoàn thành nếu chưa có test / chưa verify kỹ.**
+
+---
+
+### 7. **Commit Changes (Prompt)**
+
+Khi task hoàn thành, thông báo:
+
+```
+Task [Số Task] is complete and the checklist has been updated. Ready for commit.
+```
+
+Sau đó cung cấp commit message theo format **Conventional Commits**:
+
+| Loại      | Ví dụ                                    |
+|-----------|-------------------------------------------|
+| `feat:`   | feat: Thêm API tạo bài viết mới           |
+| `fix:`    | fix: Sửa lỗi hiển thị sai ngày giờ        |
+| `refactor:`| refactor: Tách logic xử lý mail ra service |
+| `test:`   | test: Viết unit test cho CreatePostUseCase |
+| `docs:`   | docs: Cập nhật hướng dẫn sử dụng API      |
+| `chore:`  | chore: Cập nhật Laravel lên bản 10.x       |
+
+---
+
+## Coding Standards and Conventions (Laravel)
+
+### Laravel:
+- PascalCase cho Class, camelCase cho biến/hàm.
+- Dùng `FormRequest`, `Resource`, `Service`, `Repository`.
+- Dùng Dependency Injection cho controller/service.
+- Slim Controller: Chỉ gọi UseCase / Service.
+- Dùng `@inject`, `@singleton` hoặc ServiceProvider nếu cần.
+
+### Project-Specific:
+- Tuân thủ **Clean Architecture**:
+  - `app/Domain`: Entity, ValueObject, Repository.
+  - `app/Application`: UseCases, DTOs, Validation.
+  - `app/Infrastructure`: Implementation, DB access, External Services.
+  - `app/Http`: Controllers, Requests, Resources.
+
+- Dùng **Repository Pattern + Interface Binding**.
+- Dùng Laravel Event/Listener hoặc Queue nếu cần async.
+- Viết **unit test cho logic nghiệp vụ**.
+- Tổ chức **folder theo use case**, không theo model.
+
+---
+
+## General Principles
+
+- Ưu tiên readability, maintainability, testability.
+- Keep it simple. Tránh over-engineering.
+- Tuân theo SOLID principles.
+- DRY (Don’t Repeat Yourself).
+- YAGNI (You Ain’t Gonna Need It).
+- **Không triển khai nếu TDD sai hoặc thiếu → Hỏi để làm rõ.**
+- **Không update checklist → Task chưa tính là hoàn thành.**
+
+---

@@ -1,5 +1,6 @@
 <?php
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\GutendexController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -18,4 +19,13 @@ Route::middleware('auth:api')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::post('/update-profile', [AuthController::class, 'updateProfile']);
     Route::post('/change-password', [AuthController::class, 'changePassword']);
+
+    Route::prefix('gutendex')->group(function () {
+        Route::get('/books', [GutendexController::class, 'index']);
+        Route::get('/books/{id}', [GutendexController::class, 'show']);
+        Route::post('/books', [GutendexController::class, 'store']);
+        Route::delete('/books/{id}', [GutendexController::class, 'destroy']);
+        Route::get('/authors', [GutendexController::class, 'authors']);
+        Route::get('/authors/{id}/books', [GutendexController::class, 'booksByAuthor']);
+    });
 });

@@ -1,0 +1,262 @@
+---
+description: General Rule
+globs: 
+alwaysApply: false
+---
+BoneNet Project Overview – Laravel Version
+
+Project Structure
+
+The project follows Clean Architecture principles with clear separation of concerns, adapted to Laravel’s structure and conventions:
+
+app/
+├── Application/         - Core business logic and use cases
+│   ├── Categories/      - Category management CQRS
+│   ├── Common/          - Shared logic, DTOs, responses
+│   ├── ConfigCart/      - Configuration cart system
+│   ├── Configurations/  - Configuration management
+│   └── Deployments/     - Deployment workflows
+├── Domain/              - Core domain models and business rules
+│   ├── Entities/        - Aggregate roots and domain entities
+│   ├── ValueObjects/    - Domain-specific value objects
+│   └── Interfaces/      - Repository contracts
+├── Infrastructure/      - Implementation details
+│   ├── Repositories/    - Eloquent-based data access
+│   ├── Services/        - External service integrations (RabbitMQ, Cache)
+│   └── Persistence/     - UnitOfWork, transaction handling
+├── Http/                - Presentation layer (REST controllers)
+│   ├── Controllers/     - API endpoints
+│   ├── Requests/        - Validation (FormRequest or DTO)
+│   └── Resources/       - API transformers (response shaping)
+tests/
+├── Feature/             - Endpoint tests
+└── Unit/                - Use case and domain logic tests
+
+Key Patterns & Concepts
+
+CQRS Pattern:
+
+Commands (e.g., CreateCategoryCommand) and Queries (e.g., GetAllCategoriesQuery) are separated.
+
+Application layer contains logic only; controllers are slim.
+
+final class CreateCategoryCommand
+{
+    public function __construct(
+        public string $name,
+        public ?string $description = null,
+    ) {}
+}
+
+final class CreateCategoryHandler
+{
+    public function __construct(
+        private readonly CategoryRepositoryInterface $repository,
+        private readonly UnitOfWorkInterface $unitOfWork,
+    ) {}
+
+    public function handle(CreateCategoryCommand $command): ResultDto
+    {
+        // Check, validate, create entity, persist
+    }
+}
+
+Domain-Driven Design:
+
+Rich domain models with encapsulated business rules.
+
+Value Objects used for type safety and validation.
+
+final class DataType
+{
+    private function __construct(public readonly string $value) {}
+
+    public static function string(): self => new self('string');
+    public static function number(): self => new self('number');
+
+    public static function from(string $value): self
+    {
+        return match (strtolower($value)) {
+            'string' => self::string(),
+            'number' => self::number(),
+            default => throw new DomainException("Invalid data type: $value"),
+        };
+    }
+}
+
+Auditing:
+
+Base entity tracks creation/modification timestamps using Laravel's timestamp feature.
+
+abstract class BaseAuditableEntity extends Model
+{
+    use HasTimestamps;
+
+    public DateTime $createdAt;
+    public DateTime $updatedAt;
+}
+
+Circuit Breaker Pattern:
+
+Implements fault tolerance for external services.
+
+final class CircuitBreakerService
+{
+    public function execute(string $operationKey, Closure $callback): mixed
+    {
+        // Retry logic + fallback + failure threshold
+    }
+}
+
+Core Domain Models
+
+Configuration Management:
+
+Category → Item → Value hierarchy
+
+Value supports versioning: draft/live
+
+final class ConfigurationItem
+{
+    private array $values = [];
+
+    public function __construct(
+        public string $key,
+        public DataType $type,
+        public Guid $categoryId,
+        public ?string $description = null,
+        public bool $isEncrypted = false,
+        public ?array $validationRules = null,
+    ) {}
+
+    public function update(string $key, ?string $description, ?array $rules): void
+    {
+        $this->key = $key;
+        $this->description = $description;
+        $this->validationRules = $rules;
+    }
+}
+
+Deployment System:
+
+ConfigCart used to stage config changes.
+
+Deployment tracks execution status and user.
+
+final class Deployment
+{
+    public function __construct(
+        public Guid $configCartId,
+        public Guid $publishedBy,
+        public DeploymentStatus $status = DeploymentStatus::Pending,
+        public ?string $notes = null,
+    ) {}
+
+    public function markAsSuccess(): void => $this->status = DeploymentStatus::Success;
+    public function markAsFailed(): void => $this->status = DeploymentStatus::Failed;
+}
+
+Infrastructure Highlights
+
+Persistence:
+
+Eloquent + Repository Pattern
+
+UnitOfWork handles transaction commit/rollback
+
+final class UnitOfWork implements UnitOfWorkInterface
+{
+    public function commit(): void
+    {
+        DB::commit();
+    }
+
+    public function rollback(): void
+    {
+        DB::rollBack();
+    }
+}
+
+Caching:
+
+In-memory (Laravel Cache) with concurrent-safe keys
+
+final class DataStore
+{
+    public function set(string $category, string $key, mixed $value): void
+    {
+        Cache::put("$category:$key", $value);
+    }
+
+    public function get(string $category, string $key): mixed
+    {
+        return Cache::get("$category:$key");
+    }
+}
+
+Messaging:
+
+RabbitMQ integration using php-amqplib/php-amqplib
+
+final class RabbitMQDeploymentQueueService
+{
+    public function publish(CreateDeploymentCommand $command): void
+    {
+        $message = json_encode($command);
+        // Publish to fanout exchange
+    }
+
+    public function subscribe(callable $handler): void
+    {
+        // Consume from deployment queue
+    }
+}
+
+Key Flows
+
+Configuration Creation:
+
+POST /api/categories → CreateCategoryCommand
+→ Validation → Repository → Cache Update
+
+Deployment Workflow:
+
+Create Deployment → Validate ConfigCart
+→ Queue Notification → Store Configurations
+
+Validation Process:
+
+public function rules(): array
+{
+    return [
+        'name' => ['required', 'string', 'max:255'],
+    ];
+}
+
+Getting Started Tips
+
+Start from Domain/ to understand the business.
+
+Use Application/ for CQRS logic (no DB/Eloquent there).
+
+Use Http/Controllers only for routing → call handler.
+
+Use ValueObject and Enums instead of primitive strings.
+
+Mock dependencies in tests/Unit.
+
+Important Dependencies
+
+laravel/framework
+
+php-amqplib/php-amqplib
+
+spatie/data-transfer-object or spatie/laravel-data
+
+league/flysystem (file storage abstraction)
+
+ramsey/uuid
+
+larastan/larastan (static analysis)
+
+nunomaduro/collision (error reporting)

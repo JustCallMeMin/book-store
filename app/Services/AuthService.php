@@ -96,17 +96,23 @@ class AuthService
         $validator = Validator::make($credentials, [
             'email' => 'required|string|email',
             'password' => 'required|string',
-            'remember_me' => 'sometimes|boolean',
+            'remember' => 'sometimes|boolean',
         ]);
 
         if ($validator->fails()) {
             return ['error' => $validator->errors(), 'status' => 422];
         }
 
-        $remember = $credentials['remember_me'] ?? false;
+        // Lấy trường remember
+        $remember = $credentials['remember'] ?? false;
 
-        $credentials = collect($credentials)->except(['remember_me'])->toArray();
-        if (!$token = JWTAuth::attempt($credentials)) {
+        // Xóa trường remember khỏi credentials trước khi truy vấn
+        $credentials = collect($credentials)
+            ->except(['remember'])
+            ->toArray();
+
+        // Kiểm tra đăng nhập
+        if (!$token = auth('api')->attempt($credentials)) {
             return ['error' => 'Invalid credentials', 'status' => 401];
         }
 
@@ -119,10 +125,16 @@ class AuthService
         // Nếu chọn "Remember Me", tạo token mới và lưu
         $rememberToken = null;
         if ($remember) {
+            // Tăng thời gian sống của JWT token nếu remember=true (30 ngày thay vì 1 giờ)
+            auth('api')->factory()->setTTL(60 * 24 * 30);
+            
             $rememberToken = Str::random(60);
             $user->remember_token = Hash::make($rememberToken);
             $user->remember_token_expires_at = now()->addDays(30); // Token có hạn 30 ngày
             $user->save();
+            
+            // Tạo token mới với TTL dài hạn
+            $token = auth('api')->refresh();
         }
 
         return [
@@ -130,7 +142,7 @@ class AuthService
             'user' => new UserResource($user),
             'access_token' => $token,
             'token_type' => 'bearer',
-            'expires_in' => $remember ? null : auth('api')->factory()->getTTL() * 60,
+            'expires_in' => auth('api')->factory()->getTTL() * 60, // Chuyển từ phút sang giây
             'remember_token' => $rememberToken,
             'status' => 200
         ];

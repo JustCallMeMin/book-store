@@ -1,6 +1,10 @@
 <?php
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\GutendexController;
+use App\Http\Controllers\FavoriteController;
+use App\Http\Controllers\UserActivityController;
+use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\PermissionController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -18,6 +22,44 @@ Route::middleware('auth:api')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::post('/update-profile', [AuthController::class, 'updateProfile']);
     Route::post('/change-password', [AuthController::class, 'changePassword']);
+
+    // Favorites routes
+    Route::prefix('favorites')->group(function () {
+        Route::get('/', [FavoriteController::class, 'index']);
+        Route::post('/{id}', [FavoriteController::class, 'store']);
+        Route::delete('/{id}', [FavoriteController::class, 'destroy']);
+        Route::get('/{id}/check', [FavoriteController::class, 'check']);
+    });
+
+    // User Activity routes
+    Route::prefix('activities')->group(function () {
+        Route::get('/', [UserActivityController::class, 'index']);
+        Route::get('/{id}', [UserActivityController::class, 'show']);
+        Route::delete('/clear', [UserActivityController::class, 'clear']);
+    });
+
+    // Notifications routes
+    Route::prefix('notifications')->group(function () {
+        Route::get('/', [NotificationController::class, 'index']);
+        Route::get('/{id}', [NotificationController::class, 'show']);
+        Route::post('/{id}/read', [NotificationController::class, 'markAsRead']);
+        Route::post('/read-all', [NotificationController::class, 'markAllAsRead']);
+        Route::delete('/{id}', [NotificationController::class, 'destroy']);
+    });
+
+    // Admin only routes
+    Route::middleware('role:admin')->group(function () {
+        // Permissions routes
+        Route::prefix('permissions')->group(function () {
+            Route::get('/', [PermissionController::class, 'index']);
+            Route::post('/', [PermissionController::class, 'store']);
+            Route::get('/{id}', [PermissionController::class, 'show']);
+            Route::put('/{id}', [PermissionController::class, 'update']);
+            Route::delete('/{id}', [PermissionController::class, 'destroy']);
+            Route::post('/assign', [PermissionController::class, 'assignToRole']);
+            Route::get('/roles/{roleId}', [PermissionController::class, 'getRolePermissions']);
+        });
+    });
 
     Route::prefix('gutendex')->group(function () {
         Route::get('/books', [GutendexController::class, 'index']);

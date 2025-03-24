@@ -175,6 +175,6 @@ return [
         // App\Providers\BroadcastServiceProvider::class,
         App\Providers\EventServiceProvider::class,
         App\Providers\RouteServiceProvider::class,
-        App\Providers\RedisCacheServiceProvider::class,
+        App\Providers\RedisServiceProvider::class,
     ])->toArray(),
 ];

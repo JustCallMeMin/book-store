@@ -8,21 +8,23 @@ Tài liệu này mô tả việc triển khai Redis Cache trong Book Store API �
 
 | Endpoint | Cache Time | Cache Key | Mô tả |
 |----------|------------|-----------|-------|
-| GET /api/gutendex/books | 10 phút | books:list:search:{search}:category:{category}:page:{page}:perPage:{perPage} | Danh sách sách với tìm kiếm và phân trang |
+| GET /api/gutendex/books | 10 phút | books:list:search:{search}:category:{category}:author:{authorId}:language:{language}:featured:{isFeatured}:active:{isActive}:price:{priceMin}-{priceMax}:year:{publishedYearMin}-{publishedYearMax}:sort:{sortBy}-{sortDirection}:page:{page}:perPage:{perPage} | Danh sách sách với tìm kiếm và phân trang và nhiều filter |
 | GET /api/gutendex/books/{id} | 30 phút | books:detail:{id} | Chi tiết một cuốn sách |
 | GET /api/gutendex/authors | 60 phút | authors:all | Danh sách tác giả |
 | GET /api/gutendex/categories | 60 phút | categories:all | Danh sách thể loại |
 | GET /api/gutendex/suggestions | 30 phút | suggestions:{query} | Gợi ý tìm kiếm cho sách, tác giả, thể loại |
+| GET /api/gutendex/authors/{id}/books | 15 phút | authors:{authorId}:books:page:{page}:perPage:{perPage} | Danh sách sách của một tác giả |
+| GET /api/gutendex/categories/{id}/books | 15 phút | categories:{categoryId}:books:page:{page}:perPage:{perPage} | Danh sách sách của một thể loại |
 
 ## Invalidation Cache Strategy
 
 Cache sẽ tự động được xóa trong các trường hợp sau:
 
-1. **Thêm sách mới**: Xóa cache danh sách sách, suggestions
-2. **Cập nhật sách**: Xóa cache chi tiết sách, danh sách sách, suggestions
-3. **Xóa sách**: Xóa cache chi tiết sách, danh sách sách, suggestions
-4. **Thay đổi tác giả**: Xóa cache danh sách tác giả, danh sách sách, suggestions
-5. **Thay đổi thể loại**: Xóa cache danh sách thể loại, danh sách sách, suggestions
+1. **Thêm sách mới**: Xóa cache danh sách sách, sách theo tác giả/thể loại, suggestions
+2. **Cập nhật sách**: Xóa cache chi tiết sách, danh sách sách, sách theo tác giả/thể loại, suggestions
+3. **Xóa sách**: Xóa cache chi tiết sách, danh sách sách, sách theo tác giả/thể loại, suggestions
+4. **Thay đổi tác giả**: Xóa cache danh sách tác giả, danh sách sách, sách theo tác giả, suggestions
+5. **Thay đổi thể loại**: Xóa cache danh sách thể loại, danh sách sách, sách theo thể loại, suggestions
 
 ## API để quản lý cache
 
@@ -57,6 +59,16 @@ Endpoint này trả về:
 - Danh sách 3 thể loại phù hợp nhất
 
 Kết quả được cache trong 30 phút, giúp giảm tải cho database và tăng tốc đáng kể cho các truy vấn phổ biến.
+
+## Chức năng Filter Sách Nâng Cao
+
+Hệ thống hỗ trợ nhiều tham số filter và sắp xếp:
+- Filter theo author_id, language, is_featured, is_active
+- Filter theo giá (price_min, price_max)
+- Filter theo năm xuất bản (published_year_min, published_year_max)
+- Sắp xếp theo nhiều trường (sort_by, sort_direction)
+
+Tất cả kết quả filter cũng được cache để tăng tốc truy vấn lặp lại.
 
 ## Tối ưu hóa với Redis Queue
 

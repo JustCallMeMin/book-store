@@ -14,8 +14,8 @@ class TestGutendexImport extends Command
 
     public function handle(GutendexService $gutendexService)
     {
-        $bookId = $this->argument('book_id');
-        $this->info("Testing import of book ID: {$bookId}");
+        $bookId = 1342; // Pride and Prejudice
+        $this->info("Testing import of book ID: " . $bookId);
         
         // Enable query logging
         DB::enableQueryLog();

@@ -9,7 +9,7 @@ return new class extends Migration {
     {
         Schema::create('authors', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('gutendex_id')->unique()->comment('Gutendex Author ID');
+            $table->string('gutendex_id', 32)->unique()->comment('Gutendex Author ID');
             $table->string('name');
             $table->integer('birth_year')->nullable();
             $table->integer('death_year')->nullable();

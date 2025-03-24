@@ -9,6 +9,8 @@ Tài liệu này hướng dẫn chi tiết các bước để thiết lập, c�
 - MySQL/MariaDB >= 5.7 hoặc PostgreSQL
 - Nodejs >= 16 và NPM (cho việc compile assets)
 - Git
+- WSL2 (Windows Subsystem for Linux 2) với Ubuntu
+- Redis (chạy trên WSL2)
 
 ## 1. Cài đặt dự án
 
@@ -51,10 +53,21 @@ DB_USERNAME=your_username
 DB_PASSWORD=your_password
 ```
 
-### 2.3. Cấu hình queue
+### 2.3. Cấu hình Redis và Queue
 
 ```
-QUEUE_CONNECTION=database
+QUEUE_CONNECTION=redis
+CACHE_DRIVER=redis
+
+REDIS_CLIENT=predis
+REDIS_HOST=172.25.185.153  # Địa chỉ IP của WSL2 (thay đổi theo hệ thống)
+REDIS_PASSWORD=Tnhmninh33
+REDIS_PORT=6379
+```
+
+Để lấy địa chỉ IP của WSL2:
+```bash
+wsl -d Ubuntu -- hostname -I
 ```
 
 ### 2.4. Cấu hình API keys (nếu cần)
@@ -95,36 +108,72 @@ php artisan migrate
 php artisan db:seed
 ```
 
-## 4. Thiết lập Queue
+## 4. Thiết lập Redis trên WSL2
 
-### 4.1. Tạo bảng queue
+### 4.1. Cài đặt Redis
 
 ```bash
-php artisan queue:table
-php artisan queue:failed-table
-php artisan queue:batches-table  # Nếu sử dụng job batches
-php artisan migrate
+# Trong WSL2 Ubuntu
+sudo apt update
+sudo apt install redis-server
+```
+
+### 4.2. Cấu hình Redis
+
+Sửa file `/etc/redis/redis.conf`:
+```bash
+# Cho phép kết nối từ bên ngoài
+sudo sed -i 's/bind 127.0.0.1/bind 0.0.0.0/' /etc/redis/redis.conf
+
+# Thiết lập mật khẩu
+sudo bash -c 'echo "requirepass Redis@123" >> /etc/redis/redis.conf'
+```
+
+Cập nhật file `.env`:
+```
+REDIS_CLIENT=predis
+REDIS_HOST=172.25.185.153  # Địa chỉ IP của WSL2 (thay đổi theo hệ thống)
+REDIS_PASSWORD=Redis@123
+REDIS_PORT=6379
+```
+
+### 4.3. Khởi động Redis
+
+```bash
+sudo service redis-server restart
+```
+
+### 4.4. Kiểm tra Redis
+
+```bash
+# Kiểm tra kết nối với mật khẩu
+redis-cli -h 172.25.185.153 -a "Tnhminh33" ping  # Phải trả về PONG
 ```
 
 ## 5. Khởi động Server
 
 ### 5.1. Development (môi trường phát triển)
 
-Mở ít nhất 3 terminal khác nhau và chạy các lệnh sau:
+Cách 1: Sử dụng script tự động
+```powershell
+.\start-dev.ps1
+```
 
-**Terminal 1: Web Server**
+Cách 2: Khởi động thủ công, mở ít nhất 3 terminal khác nhau:
+
+**Terminal 1: Redis trong WSL2**
 ```bash
-php artisan serve
+wsl -d Ubuntu -- sudo service redis-server start
 ```
 
 **Terminal 2: Queue Worker**
 ```bash
-php artisan queue:work-long --timeout=3600
+php artisan queue:work
 ```
 
-**Terminal 3: Scheduler (nếu cần)**
+**Terminal 3: Web Server**
 ```bash
-php artisan schedule:run
+php artisan serve
 ```
 
 Bạn có thể truy cập ứng dụng tại: http://localhost:8000
@@ -227,19 +276,38 @@ php artisan queue:cleanup
 
 ## 7. Xử lý sự cố
 
-### 7.1. Lỗi kết nối database
+### 7.1. Lỗi kết nối Redis
+
+- Kiểm tra Redis đang chạy trong WSL2:
+```bash
+wsl -d Ubuntu -- sudo service redis-server status
+```
+
+- Kiểm tra địa chỉ IP của WSL2:
+```bash
+wsl -d Ubuntu -- hostname -I
+```
+
+- Kiểm tra kết nối từ Windows đến Redis:
+```bash
+wsl -d Ubuntu -- redis-cli -h [IP_WSL2] ping
+```
+
+- Đảm bảo file .env có địa chỉ IP WSL2 chính xác
+
+### 7.2. Lỗi kết nối database
 
 - Kiểm tra thông tin trong file .env
 - Đảm bảo database server đang chạy
 - Kiểm tra quyền truy cập của user
 
-### 7.2. Lỗi queue
+### 7.3. Lỗi queue
 
 - Khởi động lại queue worker: `php artisan queue:restart`
 - Kiểm tra logs tại: `storage/logs/laravel.log`
 - Dọn dẹp các jobs bị treo: `php artisan queue:cleanup`
 
-### 7.3. Lỗi permissions
+### 7.4. Lỗi permissions
 
 Đảm bảo các thư mục sau có quyền ghi:
 ```bash
@@ -247,16 +315,39 @@ chmod -R 775 storage bootstrap/cache
 chown -R www-data:www-data storage bootstrap/cache  # Trên server Linux
 ```
 
-## 8. Cấu hình nâng cao
+## 8. Script hỗ trợ
 
-### 8.1. Horizontal Scaling
+### 8.1. start-dev.ps1
+
+Script PowerShell để tự động hóa quá trình khởi động development server:
+- Khởi động Redis trong WSL2
+- Kiểm tra kết nối Redis
+- Cài đặt dependencies nếu cần
+- Tạo và cấu hình file .env
+- Chạy migrations
+- Khởi động queue worker
+- Khởi động development server
+
+### 8.2. Dừng các services
+
+```powershell
+# Dừng PHP development server và queue worker
+taskkill /F /IM php.exe
+
+# Dừng Redis trong WSL2
+wsl -d Ubuntu -- sudo service redis-server stop
+```
+
+## 9. Cấu hình nâng cao
+
+### 9.1. Horizontal Scaling
 
 Để mở rộng quy mô theo chiều ngang, hãy xem xét:
 - Cấu hình load balancer
 - Redis cho cache và queue
 - Database replication
 
-### 8.2. Bảo mật
+### 9.2. Bảo mật
 
 - Đảm bảo HTTPS được bật
 - Cấu hình các HTTP headers bảo mật

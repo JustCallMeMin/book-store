@@ -12,6 +12,7 @@ use App\Services\GutendexService;
 use Illuminate\Http\Request;
 use App\Jobs\ImportGutendexBooks;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 
 class GutendexController extends Controller
 {
@@ -28,20 +29,40 @@ class GutendexController extends Controller
     public function index(Request $request)
     {
         $search = $request->query('search');
+        $category = $request->query('category');
         $perPage = $request->query('per_page', 15);
+        $page = $request->query('page', 1);
         
+        // Tạo cache key dựa trên query parameters
+        $cacheKey = "books:list:search:{$search}:category:{$category}:page:{$page}:perPage:{$perPage}";
+        
+        // Kiểm tra cache (10 phút)
+        if (Cache::has($cacheKey)) {
+            return response()->json(Cache::get($cacheKey));
+        }
+        
+        // Logic tìm kiếm và query hiện tại
         $query = Book::with(['authors', 'categories']);
         
         if ($search) {
-            $query->where('title', 'like', "%{$search}%")
-                  ->orWhereHas('authors', function($q) use ($search) {
-                      $q->where('name', 'like', "%{$search}%");
+            $query->where(function($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                  ->orWhereHas('authors', function($q2) use ($search) {
+                      $q2->where('name', 'like', "%{$search}%");
                   });
+            });
+        }
+        
+        if ($category) {
+            $query->whereHas('categories', function($q) use ($category) {
+                $q->where('name', 'like', "%{$category}%")
+                  ->orWhere('id', $category);
+            });
         }
         
         $books = $query->paginate($perPage);
         
-        return response()->json([
+        $result = [
             'status' => 200,
             'data' => [
                 'books' => BookResource::collection($books),
@@ -52,7 +73,12 @@ class GutendexController extends Controller
                     'last_page' => $books->lastPage()
                 ]
             ]
-        ]);
+        ];
+        
+        // Lưu kết quả vào cache (10 phút)
+        Cache::put($cacheKey, $result, 600);
+        
+        return response()->json($result);
     }
 
     /**
@@ -60,6 +86,14 @@ class GutendexController extends Controller
      */
     public function show($id)
     {
+        // Tạo cache key
+        $cacheKey = "books:detail:{$id}";
+        
+        // Kiểm tra cache (30 phút)
+        if (Cache::has($cacheKey)) {
+            return response()->json(Cache::get($cacheKey));
+        }
+        
         $book = Book::with(['authors', 'categories'])
                     ->where('gutendex_id', $id)
                     ->orWhere('id', $id)
@@ -72,10 +106,15 @@ class GutendexController extends Controller
             ], 404);
         }
         
-        return response()->json([
+        $result = [
             'status' => 200,
             'data' => new BookResource($book)
-        ]);
+        ];
+        
+        // Lưu kết quả vào cache (30 phút)
+        Cache::put($cacheKey, $result, 1800);
+        
+        return response()->json($result);
     }
 
     /**
@@ -92,6 +131,9 @@ class GutendexController extends Controller
         
         if (isset($result['data']) && $result['data'] instanceof Book) {
             $result['data'] = new BookResource($result['data']);
+            
+            // Xóa cache liên quan khi thêm sách mới
+            $this->clearListCaches();
         }
         
         return response()->json($result, $result['status']);
@@ -118,6 +160,10 @@ class GutendexController extends Controller
             $book->authors()->detach();
             $book->categories()->detach();
             $book->delete();
+            
+            // Xóa cache liên quan khi xóa sách
+            Cache::forget("books:detail:{$id}");
+            $this->clearListCaches();
             
             return response()->json([
                 'status' => 200,
@@ -149,64 +195,45 @@ class GutendexController extends Controller
         
         try {
             $request->validate([
-                'title' => 'sometimes|string',
-                'description' => 'sometimes|string',
-                'price' => 'sometimes|numeric|min:0',
-                'quantity_in_stock' => 'sometimes|integer|min:0',
+                'title' => 'sometimes|required|string|max:255',
+                'description' => 'sometimes|nullable|string',
+                'published_year' => 'sometimes|nullable|integer',
                 'is_featured' => 'sometimes|boolean',
-                'is_active' => 'sometimes|boolean',
-                'discount_percent' => 'sometimes|numeric|min:0|max:100',
+                'authors' => 'sometimes|array',
+                'authors.*.id' => 'exists:authors,id',
+                'categories' => 'sometimes|array',
+                'categories.*.id' => 'exists:categories,id',
             ]);
             
-            DB::beginTransaction();
+            // Cập nhật thông tin sách
+            $book->fill($request->only([
+                'title', 'description', 'published_year', 'is_featured'
+            ]));
             
-            // Cập nhật thông tin cơ bản
-            $updateData = $request->only([
-                'title', 'description', 'price', 'quantity_in_stock',
-                'is_featured', 'is_active', 'discount_percent'
-            ]);
-            
-            if (!empty($updateData)) {
-                $book->update($updateData);
-            }
+            $book->save();
             
             // Cập nhật tác giả nếu có
             if ($request->has('authors')) {
-                $authorIds = [];
-                foreach ($request->input('authors') as $authorName) {
-                    $author = Author::firstOrCreate(['name' => $authorName]);
-                    $authorIds[] = $author->id;
-                }
-                
-                if (!empty($authorIds)) {
-                    $book->authors()->sync($authorIds);
-                }
+                $authorIds = collect($request->input('authors'))->pluck('id')->toArray();
+                $book->authors()->sync($authorIds);
             }
             
-            // Cập nhật danh mục nếu có
+            // Cập nhật thể loại nếu có
             if ($request->has('categories')) {
-                $categoryIds = [];
-                foreach ($request->input('categories') as $categoryName) {
-                    $category = Category::firstOrCreate(['name' => $categoryName]);
-                    $categoryIds[] = $category->id;
-                }
-                
-                if (!empty($categoryIds)) {
-                    $book->categories()->sync($categoryIds);
-                }
+                $categoryIds = collect($request->input('categories'))->pluck('id')->toArray();
+                $book->categories()->sync($categoryIds);
             }
             
-            DB::commit();
+            // Xóa cache liên quan khi cập nhật sách
+            Cache::forget("books:detail:{$id}");
+            $this->clearListCaches();
             
             return response()->json([
                 'status' => 200,
                 'message' => 'Book updated successfully',
                 'data' => new BookResource($book->fresh(['authors', 'categories']))
             ]);
-            
         } catch (\Exception $e) {
-            DB::rollBack();
-            
             return response()->json([
                 'status' => 500,
                 'error' => 'Failed to update book: ' . $e->getMessage()
@@ -234,29 +261,24 @@ class GutendexController extends Controller
      */
     public function authors(Request $request)
     {
-        $search = $request->query('search');
-        $perPage = $request->query('per_page', 20);
+        $cacheKey = "authors:all";
         
-        $query = Author::withCount('books');
-        
-        if ($search) {
-            $query->where('name', 'like', "%{$search}%");
+        // Cache 1 giờ vì authors thay đổi ít
+        if (Cache::has($cacheKey)) {
+            return response()->json(Cache::get($cacheKey));
         }
         
-        $authors = $query->paginate($perPage);
+        $authors = Author::withCount('books')->get();
         
-        return response()->json([
+        $result = [
             'status' => 200,
-            'data' => [
-                'authors' => AuthorResource::collection($authors),
-                'pagination' => [
-                    'total' => $authors->total(),
-                    'per_page' => $authors->perPage(),
-                    'current_page' => $authors->currentPage(),
-                    'last_page' => $authors->lastPage()
-                ]
-            ]
-        ]);
+            'data' => AuthorResource::collection($authors)
+        ];
+        
+        // Lưu cache trong 1 giờ
+        Cache::put($cacheKey, $result, 3600);
+        
+        return response()->json($result);
     }
 
     /**
@@ -295,12 +317,24 @@ class GutendexController extends Controller
      */
     public function categories(Request $request)
     {
+        $cacheKey = "categories:all";
+        
+        // Cache 1 giờ vì categories thay đổi ít
+        if (Cache::has($cacheKey)) {
+            return response()->json(Cache::get($cacheKey));
+        }
+        
         $categories = Category::withCount('books')->get();
         
-        return response()->json([
+        $result = [
             'status' => 200,
             'data' => CategoryResource::collection($categories)
-        ]);
+        ];
+        
+        // Lưu cache trong 1 giờ
+        Cache::put($cacheKey, $result, 3600);
+        
+        return response()->json($result);
     }
     
     /**
@@ -495,6 +529,36 @@ class GutendexController extends Controller
                 'message' => 'Import failed',
                 'error' => $e->getMessage()
             ], 500);
+        }
+    }
+
+    /**
+     * Xóa cache danh sách
+     */
+    private function clearListCaches()
+    {
+        if (config('cache.default') === 'redis' && Cache::getStore() instanceof \Illuminate\Cache\RedisStore) {
+            // Pattern matching với Redis
+            $redis = Cache::getRedis();
+            $keys = $redis->keys('books:list:*');
+            
+            foreach ($keys as $key) {
+                Cache::forget($key);
+            }
+            
+            // Xóa caches khác nếu cần
+            Cache::forget('categories:all');
+            Cache::forget('authors:all');
+            
+            $suggestionKeys = $redis->keys('suggestions:*');
+            foreach ($suggestionKeys as $key) {
+                Cache::forget($key);
+            }
+        } else {
+            // Fallback cho non-Redis cache
+            Cache::forget('categories:all');
+            Cache::forget('authors:all');
+            // Không thể làm pattern matching với non-Redis stores
         }
     }
 } 

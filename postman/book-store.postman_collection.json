@@ -1054,7 +1054,7 @@
 							}
 						],
 						"url": {
-							"raw": "{{baseUrl}}/api/gutendex/categories/1/books",
+							"raw": "{{baseUrl}}/api/gutendex/categories/100/books",
 							"host": [
 								"{{baseUrl}}"
 							],
@@ -1062,11 +1062,302 @@
 								"api",
 								"gutendex",
 								"categories",
-								"1",
+								"100",
 								"books"
 							]
 						},
-						"description": "Get books by a specific category (ID 1)"
+						"description": "Get books by a specific category (ID 100)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Books List with Search",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function() {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response contains books array\", function() {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('data');",
+									"    pm.expect(jsonData.data.books).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{authToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/gutendex/books?search=adventure",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"gutendex",
+								"books"
+							],
+							"query": [
+								{
+									"key": "search",
+									"value": "adventure"
+								}
+							]
+						},
+						"description": "Search books by title or author"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Books List with Category Filter",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function() {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response contains filtered books\", function() {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('data');",
+									"    pm.expect(jsonData.data.books).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{authToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/gutendex/books?category=fiction",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"gutendex",
+								"books"
+							],
+							"query": [
+								{
+									"key": "category",
+									"value": "fiction"
+								}
+							]
+						},
+						"description": "Filter books by category name"
+					},
+					"response": []
+				},
+				{
+					"name": "Test Import",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{authToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"batch_size\": 2,\n    \"start_page\": 1,\n    \"max_pages\": 1\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/gutendex/test-import",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"gutendex",
+								"test-import"
+							]
+						},
+						"description": "Test import a small batch of books"
+					},
+					"response": []
+				},
+				{
+					"name": "Direct Import",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{authToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"book_id\": 1342\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/gutendex/direct-import",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"gutendex",
+								"direct-import"
+							]
+						},
+						"description": "Import a book directly without using queue"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Suggestions",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{authToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/gutendex/suggestions?q=adventure",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"gutendex",
+								"suggestions"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "adventure"
+								}
+							]
+						},
+						"description": "Search for books, authors, and categories with autocomplete suggestions"
+					},
+					"response": []
+				},
+				{
+					"name": "Clear Suggestions Cache (Admin)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{adminToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/gutendex/suggestions/clear",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"gutendex",
+								"suggestions",
+								"clear"
+							]
+						},
+						"description": "Clear suggestion cache (admin only)"
 					},
 					"response": []
 				}

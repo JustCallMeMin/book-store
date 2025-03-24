@@ -46,3 +46,7 @@ Route::middleware('auth:api')->group(function () {
 Route::post('/gutendex/import-all-books', [App\Http\Controllers\GutendexController::class, 'importAllBooks'])
     ->middleware(['auth:api', \App\Http\Middleware\CheckRole::class.':admin'])
     ->name('api.gutendex.import-all-books');
+
+// Tạo route cho autocomplete suggestions
+Route::get('/gutendex/suggestions', [App\Http\Controllers\AutocompleteController::class, 'suggestions'])->middleware('auth:api');
+Route::delete('/gutendex/suggestions/clear', [App\Http\Controllers\AutocompleteController::class, 'clearSuggestionCache'])->middleware(['auth:api', \App\Http\Middleware\CheckRole::class.':admin']);

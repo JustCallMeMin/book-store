@@ -45,5 +45,11 @@ class Kernel extends ConsoleKernel
         $schedule->command('queue:restart')
             ->daily()
             ->onOneServer();
+
+        // Dọn dẹp giỏ hàng hết hạn - chạy lúc 3 giờ sáng
+        $schedule->command('carts:clean-expired --days=7 --batch=500 --sleep=2')
+            ->dailyAt('03:00')
+            ->appendOutputTo(storage_path('logs/cart-cleanup.log'))
+            ->onOneServer();
     }
 } 

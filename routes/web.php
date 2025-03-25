@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Artisan;
 use App\Http\Controllers\GoogleController;
+use App\Http\Controllers\Admin\BookController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -62,4 +63,12 @@ Route::middleware(['auth', 'requires:system:manage'])->prefix('admin')->group(fu
     Route::get('/gutendex/import-all', function () {
         return redirect()->route('api.gutendex.import-all-books');
     })->name('admin.gutendex.import-all');
+
+    // Book management routes
+    Route::resource('books', BookController::class)->names('admin.books');
+    
+    // Custom routes for book stock management
+    Route::get('/books/{id}/stock', [BookController::class, 'editStock'])->name('admin.books.edit-stock');
+    Route::put('/books/{id}/stock', [BookController::class, 'updateStock'])->name('admin.books.update-stock');
+    Route::get('/books/{id}/stock/history', [BookController::class, 'stockHistory'])->name('admin.books.stock-history');
 });

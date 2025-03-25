@@ -9,6 +9,8 @@ use App\Http\Controllers\GoogleController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\PublisherController;
+use App\Http\Controllers\CartController;
+use App\Http\Controllers\OrderController;
 
 // Redirect old Google OAuth routes to new web routes
 Route::get('/auth/google/redirect', function () {
@@ -98,6 +100,19 @@ Route::middleware('auth:api')->group(function () {
         Route::get('/categories', [GutendexController::class, 'categories'])->middleware('requires.permission:categories:read');
         Route::get('/categories/{id}/books', [GutendexController::class, 'booksByCategory'])->middleware('requires.permission:categories:read');
     });
+
+    // Cart Routes - Có thể truy cập cả với khách và user đã đăng nhập
+    Route::prefix('cart')->group(function () {
+        Route::get('/', [CartController::class, 'index']);
+        Route::post('/', [CartController::class, 'store']);
+        Route::put('/{bookId}', [CartController::class, 'update']);
+        Route::delete('/', [CartController::class, 'destroy']);
+    });
+
+    // Order Routes - Chỉ truy cập với user đã đăng nhập
+    Route::post('/orders', [OrderController::class, 'store']);
+    Route::get('/orders', [OrderController::class, 'index']);
+    Route::get('/orders/{id}', [OrderController::class, 'show']);
 });
 
 // Tạo named route cho import-all-books

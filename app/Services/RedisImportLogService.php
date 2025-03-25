@@ -18,12 +18,15 @@ class RedisImportLogService
         array $metadata = []
     ): string {
         try {
+            // Process the metadata to ensure all values are strings
+            $processedMetadata = $this->processMetadata($metadata);
+            
             // Convert metadata to JSON string
-            $jsonMetadata = json_encode($metadata, JSON_UNESCAPED_UNICODE);
+            $jsonMetadata = json_encode($processedMetadata, JSON_UNESCAPED_UNICODE);
             if ($jsonMetadata === false) {
                 $jsonMetadata = json_encode([
                     'error' => 'Failed to encode metadata',
-                    'original' => print_r($metadata, true)
+                    'original' => print_r($processedMetadata, true)
                 ]);
             }
 
@@ -48,7 +51,9 @@ class RedisImportLogService
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error('Redis log error', [
                 'error' => $e->getMessage(),
-                'data' => $data ?? null
+                'trace' => $e->getTraceAsString(),
+                'data' => isset($data) ? print_r($data, true) : null,
+                'metadata' => isset($metadata) ? print_r($metadata, true) : null
             ]);
             return '';
         }
@@ -56,17 +61,57 @@ class RedisImportLogService
 
     /**
      * Process metadata array to ensure all values are strings and not too long
+     * Enhanced to handle complex data types
      */
     protected function processMetadata(array $metadata): array
     {
         $processed = [];
         foreach ($metadata as $key => $value) {
+            // Convert key to string (just to be sure)
+            $stringKey = (string) $key;
+            
             if (is_array($value)) {
-                $processed[$key] = $this->processMetadata($value);
+                // If value is array, convert to JSON string
+                try {
+                    $jsonValue = json_encode($value, JSON_UNESCAPED_UNICODE);
+                    if ($jsonValue === false) {
+                        $processed[$stringKey] = 'Error encoding array';
+                    } else {
+                        $processed[$stringKey] = strlen($jsonValue) > 1000 
+                            ? substr($jsonValue, 0, 997) . '...' 
+                            : $jsonValue;
+                    }
+                } catch (\Exception $e) {
+                    $processed[$stringKey] = 'Error encoding array: ' . $e->getMessage();
+                }
+            } elseif (is_object($value)) {
+                // If value is object, try to convert to JSON or use toString
+                try {
+                    $jsonValue = json_encode($value, JSON_UNESCAPED_UNICODE);
+                    if ($jsonValue === false) {
+                        // Try using print_r as fallback
+                        $processed[$stringKey] = substr(print_r($value, true), 0, 1000);
+                    } else {
+                        $processed[$stringKey] = strlen($jsonValue) > 1000 
+                            ? substr($jsonValue, 0, 997) . '...'
+                            : $jsonValue;
+                    }
+                } catch (\Exception $e) {
+                    $processed[$stringKey] = 'Error encoding object: ' . $e->getMessage();
+                }
+            } elseif (is_resource($value)) {
+                // Resources cannot be converted to strings directly
+                $processed[$stringKey] = 'Resource type: ' . get_resource_type($value);
+            } elseif (is_bool($value)) {
+                // Convert boolean to more readable format
+                $processed[$stringKey] = $value ? 'true' : 'false';
+            } elseif (is_null($value)) {
+                // Handle null values
+                $processed[$stringKey] = '';
             } else {
-                // Convert to string and limit length to 1000 characters
-                $stringValue = is_null($value) ? '' : (string) $value;
-                $processed[$key] = strlen($stringValue) > 1000 
+                // Handle all other scalar values (string, int, float)
+                $stringValue = (string) $value;
+                $processed[$stringKey] = strlen($stringValue) > 1000 
                     ? substr($stringValue, 0, 997) . '...' 
                     : $stringValue;
             }

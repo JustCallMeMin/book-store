@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use App\Models\Role;
 
@@ -10,15 +11,12 @@ class RoleSeeder extends Seeder
     /**
      * Run the database seeds.
      */
-    public function run()
+    public function run(): void
     {
-        $roles = ['User', 'Admin'];
-
+        $roles = ['Admin', 'User'];
+        
         foreach ($roles as $roleName) {
-            Role::firstOrCreate(
-                ['name' => $roleName], // Điều kiện kiểm tra tồn tại
-                ['created_at' => now(), 'updated_at' => now()] // Dữ liệu để tạo nếu chưa tồn tại
-            );
+            Role::firstOrCreate(['name' => $roleName]);
         }
     }
 }

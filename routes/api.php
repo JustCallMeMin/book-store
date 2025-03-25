@@ -5,8 +5,23 @@ use App\Http\Controllers\FavoriteController;
 use App\Http\Controllers\UserActivityController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PermissionController;
+use App\Http\Controllers\GoogleController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\PublisherController;
+
+// Redirect old Google OAuth routes to new web routes
+Route::get('/auth/google/redirect', function () {
+    return redirect()->route('oauth.google.redirect');
+});
+
+Route::get('/auth/google/callback', function () {
+    return redirect()->route('oauth.google.callback');
+});
+
+Route::get('/auth/google/verify/{token}', function ($token) {
+    return redirect()->route('oauth.google.verify', ['token' => $token]);
+});
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
@@ -51,44 +66,74 @@ Route::middleware('auth:api')->group(function () {
     Route::middleware('role:admin')->group(function () {
         // Permissions routes
         Route::prefix('permissions')->group(function () {
-            Route::get('/', [PermissionController::class, 'index']);
-            Route::post('/', [PermissionController::class, 'store']);
-            Route::get('/{id}', [PermissionController::class, 'show']);
-            Route::put('/{id}', [PermissionController::class, 'update']);
-            Route::delete('/{id}', [PermissionController::class, 'destroy']);
-            Route::post('/assign', [PermissionController::class, 'assignToRole']);
-            Route::get('/roles/{roleId}', [PermissionController::class, 'getRolePermissions']);
+            Route::get('/', [PermissionController::class, 'index'])->middleware('requires.permission:permissions:manage');
+            Route::post('/', [PermissionController::class, 'store'])->middleware('requires.permission:permissions:manage');
+            Route::get('/{id}', [PermissionController::class, 'show'])->middleware('requires.permission:permissions:manage');
+            Route::put('/{id}', [PermissionController::class, 'update'])->middleware('requires.permission:permissions:manage');
+            Route::delete('/{id}', [PermissionController::class, 'destroy'])->middleware('requires.permission:permissions:manage');
+            Route::post('/assign', [PermissionController::class, 'assignToRole'])->middleware('requires.permission:permissions:manage');
+            Route::get('/roles/{roleId}', [PermissionController::class, 'getRolePermissions'])->middleware('requires.permission:permissions:manage');
         });
     });
 
     Route::prefix('gutendex')->group(function () {
-        Route::get('/books', [GutendexController::class, 'index']);
-        Route::get('/books/{id}', [GutendexController::class, 'show']);
-        Route::post('/books', [GutendexController::class, 'store'])->middleware('auth:api');
-        Route::delete('/books/{id}', [GutendexController::class, 'destroy'])->middleware('auth:api');
-        Route::put('/books/{id}', [GutendexController::class, 'update'])->middleware('auth:api');
-        Route::post('/bulk-import', [GutendexController::class, 'bulkImport'])->middleware('auth:api');
-        Route::get('/authors', [GutendexController::class, 'authors']);
-        Route::get('/authors/{id}/books', [GutendexController::class, 'booksByAuthor']);
-        Route::get('/categories', [GutendexController::class, 'categories']);
-        Route::get('/categories/{id}/books', [GutendexController::class, 'booksByCategory']);
+        // Basic book routes accessible to all authenticated users
+        Route::get('/books', [GutendexController::class, 'index'])->middleware('requires.permission:books:read');
+        Route::get('/books/{id}', [GutendexController::class, 'show'])->middleware('requires.permission:books:read');
         
-        // Admin only route để import tất cả sách
-        Route::post('/import-all-books', [GutendexController::class, 'importAllBooks'])->middleware('auth:api');
+        // Book management routes requiring specific permissions
+        Route::post('/books', [GutendexController::class, 'store'])->middleware('requires.permission:books:create');
+        Route::delete('/books/{id}', [GutendexController::class, 'destroy'])->middleware('requires.permission:books:delete');
+        Route::put('/books/{id}', [GutendexController::class, 'update'])->middleware('requires.permission:books:update');
         
-        // Test route to import a small batch of books
-        Route::post('/test-import', [GutendexController::class, 'testImport'])->middleware('auth:api');
+        // Import routes requiring system:import permission
+        Route::post('/bulk-import', [GutendexController::class, 'bulkImport'])->middleware('requires.permission:system:import');
+        Route::post('/import-all-books', [GutendexController::class, 'importAllBooks'])->middleware('requires.permission:system:import');
+        Route::post('/test-import', [GutendexController::class, 'testImport'])->middleware('requires.permission:system:import');
+        Route::post('/direct-import', [GutendexController::class, 'directImport'])->middleware('requires.permission:system:import');
         
-        // Direct test route that imports without queues
-        Route::post('/direct-import', [GutendexController::class, 'directImport'])->middleware('auth:api');
+        // Category routes
+        Route::get('/authors', [GutendexController::class, 'authors'])->middleware('requires.permission:books:read');
+        Route::get('/authors/{id}/books', [GutendexController::class, 'booksByAuthor'])->middleware('requires.permission:books:read');
+        Route::get('/categories', [GutendexController::class, 'categories'])->middleware('requires.permission:categories:read');
+        Route::get('/categories/{id}/books', [GutendexController::class, 'booksByCategory'])->middleware('requires.permission:categories:read');
     });
 });
 
 // Tạo named route cho import-all-books
 Route::post('/gutendex/import-all-books', [App\Http\Controllers\GutendexController::class, 'importAllBooks'])
-    ->middleware(['auth:api', \App\Http\Middleware\CheckRole::class.':admin'])
+    ->middleware(['auth:api', 'requires.permission:system:import'])
     ->name('api.gutendex.import-all-books');
 
 // Tạo route cho autocomplete suggestions
-Route::get('/gutendex/suggestions', [App\Http\Controllers\AutocompleteController::class, 'suggestions'])->middleware('auth:api');
-Route::delete('/gutendex/suggestions/clear', [App\Http\Controllers\AutocompleteController::class, 'clearSuggestionCache'])->middleware(['auth:api', \App\Http\Middleware\CheckRole::class.':admin']);
+Route::get('/gutendex/suggestions', [App\Http\Controllers\AutocompleteController::class, 'suggestions'])
+    ->middleware(['auth:api', 'requires.permission:books:read']);
+Route::delete('/gutendex/suggestions/clear', [App\Http\Controllers\AutocompleteController::class, 'clearSuggestionCache'])
+    ->middleware(['auth:api', 'requires.permission:system:manage']);
+
+// Google OAuth Routes have been moved to web.php
+
+// Publisher CRUD - Quản lý Nhà xuất bản
+Route::get('/publishers', [PublisherController::class, 'index'])
+    ->middleware(['auth:api', 'requires.permission:publishers:read'])
+    ->name('api.publishers.index');
+
+Route::get('/publishers/{id}', [PublisherController::class, 'show'])
+    ->middleware(['auth:api', 'requires.permission:publishers:read'])
+    ->name('api.publishers.show');
+
+Route::get('/publishers/{id}/books', [PublisherController::class, 'books'])
+    ->middleware(['auth:api', 'requires.permission:publishers:read'])
+    ->name('api.publishers.books');
+
+Route::post('/publishers', [PublisherController::class, 'store'])
+    ->middleware(['auth:api', 'requires.permission:publishers:create'])
+    ->name('api.publishers.store');
+
+Route::put('/publishers/{id}', [PublisherController::class, 'update'])
+    ->middleware(['auth:api', 'requires.permission:publishers:update'])
+    ->name('api.publishers.update');
+
+Route::delete('/publishers/{id}', [PublisherController::class, 'destroy'])
+    ->middleware(['auth:api', 'requires.permission:publishers:delete'])
+    ->name('api.publishers.destroy');

@@ -3,16 +3,21 @@
 namespace App\Http\Controllers;
 
 use App\Services\RedisFavoriteService;
+use App\Services\RedisActivityService;
 use Illuminate\Http\Request;
 use App\Models\Book;
 
 class FavoriteController extends Controller
 {
     protected RedisFavoriteService $favoriteService;
+    protected RedisActivityService $activityService;
 
-    public function __construct(RedisFavoriteService $favoriteService)
-    {
+    public function __construct(
+        RedisFavoriteService $favoriteService,
+        RedisActivityService $activityService
+    ) {
         $this->favoriteService = $favoriteService;
+        $this->activityService = $activityService;
     }
 
     public function index(Request $request)
@@ -30,6 +35,16 @@ class FavoriteController extends Controller
     {
         $book = Book::findOrFail($id);
         $this->favoriteService->add($request->user()->id, $book->id);
+        
+        // Log activity
+        $this->activityService->log(
+            $request->user()->id,
+            'add_favorite',
+            'Added book to favorites: ' . $book->title,
+            ['book_id' => $book->id, 'book_title' => $book->title],
+            $request->ip(),
+            $request->userAgent()
+        );
 
         return response()->json([
             'success' => true,
@@ -41,6 +56,16 @@ class FavoriteController extends Controller
     {
         $book = Book::findOrFail($id);
         $this->favoriteService->remove($request->user()->id, $book->id);
+        
+        // Log activity
+        $this->activityService->log(
+            $request->user()->id,
+            'remove_favorite',
+            'Removed book from favorites: ' . $book->title,
+            ['book_id' => $book->id, 'book_title' => $book->title],
+            $request->ip(),
+            $request->userAgent()
+        );
 
         return response()->json([
             'success' => true,

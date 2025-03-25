@@ -4,14 +4,19 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Services\AuthService;
+use App\Services\RedisActivityService;
 
 class AuthController extends Controller
 {
     protected AuthService $authService;
+    protected RedisActivityService $activityService;
 
-    public function __construct(AuthService $authService)
-    {
+    public function __construct(
+        AuthService $authService,
+        RedisActivityService $activityService
+    ) {
         $this->authService = $authService;
+        $this->activityService = $activityService;
     }
 
     /**
@@ -19,7 +24,21 @@ class AuthController extends Controller
      */
     public function register(Request $request)
     {
-        return $this->handleResponse($this->authService->register($request->all()));
+        $result = $this->authService->register($request->all());
+        
+        // Ghi lại hoạt động nếu đăng ký thành công
+        if ($result['status'] === 201 && isset($result['user'])) {
+            $this->activityService->log(
+                $result['user']['id'],
+                'register',
+                'User registered successfully',
+                [],
+                $request->ip(),
+                $request->userAgent()
+            );
+        }
+        
+        return $this->handleResponse($result);
     }
 
     /**
@@ -33,7 +52,21 @@ class AuthController extends Controller
             'remember' => 'sometimes|boolean',
         ]);
         
-        return $this->handleResponse($this->authService->login($request->all()));
+        $result = $this->authService->login($request->all());
+        
+        // Ghi lại hoạt động nếu đăng nhập thành công
+        if ($result['status'] === 200 && isset($result['user'])) {
+            $this->activityService->log(
+                $result['user']['id'],
+                'login',
+                'User logged in',
+                ['method' => 'credentials'],
+                $request->ip(),
+                $request->userAgent()
+            );
+        }
+        
+        return $this->handleResponse($result);
     }
 
     /**
@@ -41,7 +74,24 @@ class AuthController extends Controller
      */
     public function logout()
     {
-        return $this->handleResponse($this->authService->logout());
+        // Lấy user ID trước khi đăng xuất
+        $userId = auth()->id();
+        
+        $result = $this->authService->logout();
+        
+        // Ghi lại hoạt động đăng xuất
+        if ($userId) {
+            $this->activityService->log(
+                $userId,
+                'logout',
+                'User logged out',
+                [],
+                request()->ip(),
+                request()->userAgent()
+            );
+        }
+        
+        return $this->handleResponse($result);
     }
 
     /**
@@ -49,7 +99,22 @@ class AuthController extends Controller
      */
     public function profile()
     {
-        return $this->handleResponse($this->authService->profile());
+        $userId = auth()->id();
+        $result = $this->authService->profile();
+        
+        // Ghi lại hoạt động xem hồ sơ
+        if ($userId) {
+            $this->activityService->log(
+                $userId,
+                'view_profile',
+                'User viewed their profile',
+                [],
+                request()->ip(),
+                request()->userAgent()
+            );
+        }
+        
+        return $this->handleResponse($result);
     }
 
     /**
@@ -57,7 +122,22 @@ class AuthController extends Controller
      */
     public function updateProfile(Request $request)
     {
-        return $this->handleResponse($this->authService->updateProfile($request->all()));
+        $userId = auth()->id();
+        $result = $this->authService->updateProfile($request->all());
+        
+        // Ghi lại hoạt động cập nhật hồ sơ
+        if ($result['status'] === 200 && $userId) {
+            $this->activityService->log(
+                $userId,
+                'update_profile',
+                'User updated their profile',
+                ['fields' => array_keys($request->except(['password', 'token']))],
+                $request->ip(),
+                $request->userAgent()
+            );
+        }
+        
+        return $this->handleResponse($result);
     }
 
     /**
@@ -65,7 +145,22 @@ class AuthController extends Controller
      */
     public function changePassword(Request $request)
     {
-        return $this->handleResponse($this->authService->changePassword($request->all()));
+        $userId = auth()->id();
+        $result = $this->authService->changePassword($request->all());
+        
+        // Ghi lại hoạt động đổi mật khẩu
+        if ($result['status'] === 200 && $userId) {
+            $this->activityService->log(
+                $userId,
+                'change_password',
+                'User changed their password',
+                [],
+                $request->ip(),
+                $request->userAgent()
+            );
+        }
+        
+        return $this->handleResponse($result);
     }
 
     /**

@@ -6,11 +6,13 @@ use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
 {
-    public function run()
+    public function run(): void
     {
         // Seed bảng roles (nếu cần)
         $this->call([
             RoleSeeder::class, // Nếu bạn có seeder role riêng
+            AdminSeeder::class,
+            RedisPermissionSeeder::class,
         ]);
 
         // Seed admin

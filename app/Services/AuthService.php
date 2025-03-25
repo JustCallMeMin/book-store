@@ -43,10 +43,17 @@ class AuthService
         DB::beginTransaction();
         try {
             $user = User::create([
+                'id' => Str::uuid(),
                 'first_name' => $data['first_name'],
                 'last_name' => $data['last_name'],
                 'email' => $data['email'],
                 'password' => Hash::make($data['password']),
+                'provider' => null,
+                'provider_id' => null,
+                'oauth_verified' => false,
+                'oauth_verified_at' => null,
+                'oauth_token' => null,
+                'oauth_refresh_token' => null,
                 'remember_token' => null,
             ]);
 
@@ -56,7 +63,8 @@ class AuthService
             return $this->generateAuthResponse($user, 'User successfully registered', 201);
         } catch (\Exception $e) {
             DB::rollBack();
-            return ['error' => 'Registration failed', 'status' => 500];
+            \Log::error('Registration failed: ' . $e->getMessage());
+            return ['error' => 'Registration failed: ' . $e->getMessage(), 'status' => 500];
         }
     }
 

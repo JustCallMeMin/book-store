@@ -4,6 +4,7 @@ namespace App\Services;
 
 use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
 
 class RedisActivityService
 {
@@ -22,6 +23,7 @@ class RedisActivityService
         $key = $this->getKey($userId);
         
         $activity = [
+            'id' => (string) Str::uuid(),
             'type' => $activityType,
             'description' => $description,
             'metadata' => $metadata,

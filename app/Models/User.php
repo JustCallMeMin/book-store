@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
 use PHPOpenSourceSaver\JWTAuth\Contracts\JWTSubject;
 use Illuminate\Support\Str;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -11,26 +12,45 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class User extends Authenticatable implements JWTSubject
 {
-    use HasFactory;
-
-    protected $fillable = [
-        'first_name', 'last_name', 'email', 'password'
-    ];
-
-    protected $hidden = [
-        'password',
-    ];
+    use HasFactory, Notifiable;
 
     public $incrementing = false;
     protected $keyType = 'string';
 
+    protected $fillable = [
+        'id',
+        'first_name',
+        'last_name',
+        'email',
+        'password',
+        'provider',
+        'provider_id',
+        'oauth_verified',
+        'oauth_verified_at',
+        'oauth_token',
+        'oauth_refresh_token'
+    ];
+
+    protected $hidden = [
+        'password',
+        'remember_token',
+        'oauth_token',
+        'oauth_refresh_token'
+    ];
+
+    protected $casts = [
+        'email_verified_at' => 'datetime',
+        'oauth_verified_at' => 'datetime',
+        'oauth_verified' => 'boolean'
+    ];
+
     protected static function boot()
     {
         parent::boot();
-
+        
         static::creating(function ($model) {
-            if (!$model->{$model->getKeyName()}) {
-                $model->{$model->getKeyName()} = (string) Str::uuid();
+            if (!$model->id) {
+                $model->id = Str::uuid();
             }
         });
     }
@@ -46,12 +66,9 @@ class User extends Authenticatable implements JWTSubject
     /**
      * Lấy các claims tùy chỉnh cho JWT.
      */
-    public function getJWTCustomClaims(): array
+    public function getJWTCustomClaims()
     {
-        return [
-            'user_id' => $this->id,
-            'roles'   => $this->roles()->pluck('name')
-        ];
+        return [];
     }
 
     /**
@@ -100,5 +117,10 @@ class User extends Authenticatable implements JWTSubject
     public function hasRole(string $roleName): bool
     {
         return $this->roles()->where('name', $roleName)->exists();
+    }
+
+    public function oauthVerifications()
+    {
+        return $this->hasMany(OAuthVerification::class);
     }
 }

@@ -36,7 +36,7 @@ class PermissionController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'role_id' => 'required|uuid|exists:roles,id',
+            'role_id' => 'required|exists:roles,id',
             'permission' => 'required|string'
         ]);
 
@@ -99,7 +99,7 @@ class PermissionController extends Controller
     public function assignToRole(Request $request)
     {
         $request->validate([
-            'role_id' => 'required|uuid|exists:roles,id',
+            'role_id' => 'required|exists:roles,id',
             'permissions' => 'required|array',
             'permissions.*' => 'string'
         ]);

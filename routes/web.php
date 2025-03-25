@@ -3,9 +3,17 @@
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Artisan;
+use App\Http\Controllers\GoogleController;
 
 Route::get('/', function () {
     return view('welcome');
+});
+
+// Google OAuth Routes
+Route::prefix('auth/google')->group(function () {
+    Route::get('redirect', [GoogleController::class, 'redirectToGoogle'])->name('oauth.google.redirect');
+    Route::get('callback', [GoogleController::class, 'handleGoogleCallback'])->name('oauth.google.callback');
+    Route::get('verify/{token}', [GoogleController::class, 'verifyAccountLinking'])->name('oauth.google.verify');
 });
 
 // Log Viewer - Chỉ hiển thị trong môi trường phát triển
@@ -17,7 +25,7 @@ if (app()->environment('local')) {
 }
 
 // Queue monitoring routes - protected by admin role
-Route::middleware(['auth', \App\Http\Middleware\CheckRole::class.':admin'])->prefix('admin')->group(function () {
+Route::middleware(['auth', 'requires:system:manage'])->prefix('admin')->group(function () {
     Route::get('/queue-jobs', function () {
         $jobs = DB::table('jobs')->paginate(20);
         $failedJobs = DB::table('failed_jobs')->paginate(20);

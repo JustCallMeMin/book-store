@@ -7,6 +7,7 @@ use App\Models\Book;
 use App\Models\Author;
 use App\Models\Category;
 use Illuminate\Support\Facades\DB;
+use App\Models\Publisher;
 
 class GutendexService
 {
@@ -113,7 +114,7 @@ class GutendexService
                 return [
                     'status' => 409,
                     'error' => 'Book already exists in database',
-                    'data' => $existingBook->load(['authors', 'categories'])
+                    'data' => $existingBook->load(['authors', 'categories', 'publisher'])
                 ];
             }
 
@@ -145,6 +146,10 @@ class GutendexService
                 $priceNote = 'Sách miễn phí';
             }
 
+            // Tạo hoặc tìm Publisher - Đảm bảo luôn tạo Publisher ngay cả khi tên là giá trị mặc định
+            $publisherName = $additionalInfo['publisher'] ?? 'Unknown Publisher';
+            $publisher = Publisher::firstOrCreate(['name' => $publisherName]);
+
             // Lưu thông tin sách với các trường mới
             $book = Book::create([
                 'gutendex_id' => $bookId,
@@ -160,7 +165,8 @@ class GutendexService
                 'download_count' => $bookDetails['download_count'] ?? 0,
                 // Các trường từ Google Books API
                 'isbn' => $additionalInfo['isbn'],
-                'publisher' => $additionalInfo['publisher'],
+                'publisher' => $publisherName, // Lưu tên nhà xuất bản
+                'publisher_id' => $publisher->id, // Đảm bảo publisher_id luôn được thiết lập
                 'published_date' => $additionalInfo['published_date'] ? date('Y-m-d', strtotime($additionalInfo['published_date'])) : null,
                 'description' => $description,
                 'page_count' => $additionalInfo['page_count'] ?? random_int(100, 500),
@@ -246,7 +252,7 @@ class GutendexService
             return [
                 'status' => 200,
                 'message' => 'Book saved successfully',
-                'data' => $book->load(['authors', 'categories'])
+                'data' => $book->load(['authors', 'categories', 'publisher'])
             ];
         } catch (\Exception $e) {
             DB::rollBack();
@@ -400,61 +406,64 @@ class GutendexService
             // Lấy dữ liệu từ response
             $bookDetails = $bookData['data'];
 
-            // Tìm sách trong database
-            $book = Book::where('gutendex_id', $bookId)->first();
-            if (!$book) {
-                return [
-                    'status' => 404,
-                    'error' => 'Book not found in database'
-                ];
-            }
+            // Lấy sách cần cập nhật
+            $book = Book::where('gutendex_id', $bookId)->firstOrFail();
 
             // Tìm thông tin bổ sung từ Google Books API
             $additionalInfo = $this->getAdditionalBookInfo($bookDetails);
-            
-            // Cập nhật giá nếu cần - đảm bảo luôn có giá
-            $price = $book->price;
-            if (!empty($additionalInfo['price'])) {
-                $price = $additionalInfo['price'];
-            } else if ($book->price == 0 || $book->price === null) {
-                // Nếu giá là 0 hoặc null, có 10% khả năng để sách miễn phí
-                $makeBookFree = mt_rand(0, 9) === 0; // 10% chance for free books
-                $price = $makeBookFree ? 0 : random_int(50, 200) * 1000;
-            }
-            
-            // Nếu sách miễn phí (giá 0), thêm ghi chú
-            $priceNote = null;
-            if ($price == 0) {
-                $priceNote = 'Sách miễn phí';
+
+            // Tạo mô tả từ subjects nếu không có mô tả từ Google Books
+            $description = $additionalInfo['description'];
+            if (empty($description) && !empty($bookDetails['subjects'])) {
+                $description = "This book covers the following subjects: " . implode(", ", array_slice($bookDetails['subjects'], 0, 5));
+                if (count($bookDetails['subjects']) > 5) {
+                    $description .= ", and more.";
+                }
             }
 
-            // Cập nhật thông tin sách 
+            // Lấy cover image từ formats nếu không có từ Google Books
+            $coverImage = $additionalInfo['cover_image'];
+            if (empty($coverImage) && isset($bookDetails['formats']['image/jpeg'])) {
+                $coverImage = $bookDetails['formats']['image/jpeg'];
+            }
+
+            // Tạo hoặc tìm Publisher - Đảm bảo luôn tạo Publisher ngay cả khi tên là giá trị mặc định
+            $publisherName = $additionalInfo['publisher'] ?? 'Unknown Publisher';
+            $publisher = Publisher::firstOrCreate(['name' => $publisherName]);
+
+            // Cập nhật thông tin sách
             $book->update([
                 'title' => $bookDetails['title'],
                 'subjects' => $bookDetails['subjects'] ?? [],
                 'bookshelves' => $bookDetails['bookshelves'] ?? [],
                 'languages' => $bookDetails['languages'] ?? [],
+                'summaries' => $bookDetails['summaries'] ?? [],
+                'translators' => $bookDetails['translators'] ?? [],
+                'copyright' => $bookDetails['copyright'] ?? false,
+                'media_type' => $bookDetails['media_type'] ?? 'text',
+                'formats' => $bookDetails['formats'] ?? [],
                 'download_count' => $bookDetails['download_count'] ?? 0,
-                // Cập nhật các trường từ Google Books nếu có thông tin mới
+                // Các trường từ Google Books API
                 'isbn' => $additionalInfo['isbn'] ?: $book->isbn,
-                'publisher' => $additionalInfo['publisher'] ?: $book->publisher,
-                'description' => $additionalInfo['description'] ?: $book->description,
+                'publisher' => $publisherName ?: $book->publisher,
+                'publisher_id' => $publisher->id, // Đảm bảo publisher_id luôn được thiết lập
+                'published_date' => $additionalInfo['published_date'] ? date('Y-m-d', strtotime($additionalInfo['published_date'])) : $book->published_date,
+                'description' => $description ?: $book->description,
                 'page_count' => $additionalInfo['page_count'] ?: $book->page_count,
-                'cover_image' => $additionalInfo['cover_image'] ?: $book->cover_image,
-                'price' => $price,
-                'price_note' => $priceNote,
+                'cover_image' => $coverImage ?: $book->cover_image,
+                // Không cập nhật các trường liên quan đến bán hàng
+                // 'price', 'discount_percent', 'is_featured', 'is_active', 'quantity_in_stock', ...
             ]);
 
-            // Cập nhật thông tin tác giả
+            // Cập nhật tác giả nếu có thông tin mới
             if (!empty($bookDetails['authors'])) {
-                // Xóa các liên kết tác giả cũ
+                // Xóa tất cả liên kết tác giả hiện tại
                 $book->authors()->detach();
                 
+                // Thêm lại tác giả mới
                 foreach ($bookDetails['authors'] as $authorData) {
-                    // Tạo một unique ID nếu không có sẵn
                     $authorId = $authorData['id'] ?? md5($authorData['name']);
                     
-                    // Tạo hoặc cập nhật tác giả
                     $author = Author::firstOrCreate(
                         ['gutendex_id' => $authorId],
                         [
@@ -464,36 +473,43 @@ class GutendexService
                         ]
                     );
                     
-                    // Liên kết tác giả với sách
                     $book->authors()->attach($author->id);
                 }
-            } else if ($book->authors()->count() === 0) {
-                // Nếu không có thông tin tác giả và sách chưa có tác giả nào, tạo tác giả "Unknown"
-                $author = Author::firstOrCreate(
-                    ['name' => 'Unknown Author'],
-                    ['gutendex_id' => 0]
-                );
-                $book->authors()->attach($author->id);
             }
+
+            // Cập nhật categories (xóa cũ, thêm mới)
+            $book->categories()->detach();
             
-            // Cập nhật categories nếu cần
-            if ($book->categories()->count() === 0) {
-                // Nếu sách chưa có category nào, thêm từ subjects hoặc bookshelves
-                if (!empty($bookDetails['subjects'])) {
-                    foreach ($bookDetails['subjects'] as $subjectName) {
-                        $category = Category::firstOrCreate(['name' => $subjectName]);
-                        $book->categories()->attach($category->id);
-                    }
-                } else if (!empty($bookDetails['bookshelves'])) {
-                    foreach ($bookDetails['bookshelves'] as $bookshelfName) {
-                        $category = Category::firstOrCreate(['name' => $bookshelfName]);
-                        $book->categories()->attach($category->id);
-                    }
-                } else {
-                    // Nếu vẫn không có category nào, thêm "Uncategorized"
-                    $category = Category::firstOrCreate(['name' => 'Uncategorized']);
+            // Thêm categories từ subjects
+            if (!empty($bookDetails['subjects'])) {
+                foreach ($bookDetails['subjects'] as $subjectName) {
+                    $category = Category::firstOrCreate(['name' => $subjectName]);
                     $book->categories()->attach($category->id);
                 }
+            }
+            
+            // Thêm categories từ Google Books
+            if (!empty($additionalInfo['categories'])) {
+                foreach ($additionalInfo['categories'] as $categoryName) {
+                    $category = Category::firstOrCreate(['name' => $categoryName]);
+                    if (!$book->categories()->where('categories.id', $category->id)->exists()) {
+                        $book->categories()->attach($category->id);
+                    }
+                }
+            }
+            
+            // Thêm categories từ bookshelves nếu không có subjects
+            if (empty($bookDetails['subjects']) && !empty($bookDetails['bookshelves'])) {
+                foreach ($bookDetails['bookshelves'] as $bookshelfName) {
+                    $category = Category::firstOrCreate(['name' => $bookshelfName]);
+                    $book->categories()->attach($category->id);
+                }
+            }
+            
+            // Nếu sau khi cập nhật, sách vẫn không có category nào
+            if ($book->categories()->count() === 0) {
+                $category = Category::firstOrCreate(['name' => 'Uncategorized']);
+                $book->categories()->attach($category->id);
             }
 
             DB::commit();
@@ -501,7 +517,7 @@ class GutendexService
             return [
                 'status' => 200,
                 'message' => 'Book updated successfully',
-                'data' => $book->fresh()->load(['authors', 'categories'])
+                'data' => $book->fresh()->load(['authors', 'categories', 'publisher'])
             ];
         } catch (\Exception $e) {
             DB::rollBack();

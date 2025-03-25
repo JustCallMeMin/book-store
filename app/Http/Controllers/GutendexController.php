@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Resources\AuthorResource;
 use App\Http\Resources\BookResource;
 use App\Http\Resources\CategoryResource;
+use App\Http\Resources\PublisherResource;
 use App\Models\Book;
 use App\Models\Author;
 use App\Models\Category;
@@ -14,16 +15,22 @@ use App\Jobs\ImportGutendexBooks;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
 use App\Services\RedisImportLogService;
+use App\Services\RedisActivityService;
 
 class GutendexController extends Controller
 {
     protected GutendexService $gutendexService;
     protected RedisImportLogService $importLogService;
+    protected RedisActivityService $activityService;
 
-    public function __construct(GutendexService $gutendexService, RedisImportLogService $importLogService)
-    {
+    public function __construct(
+        GutendexService $gutendexService, 
+        RedisImportLogService $importLogService,
+        RedisActivityService $activityService
+    ) {
         $this->gutendexService = $gutendexService;
         $this->importLogService = $importLogService;
+        $this->activityService = $activityService;
     }
 
     /**
@@ -42,6 +49,8 @@ class GutendexController extends Controller
         $priceMax = $request->query('price_max');
         $publishedYearMin = $request->query('published_year_min');
         $publishedYearMax = $request->query('published_year_max');
+        $publisher = $request->query('publisher');
+        $publisherId = $request->query('publisher_id');
         $sortBy = $request->query('sort_by', 'id');
         $sortDirection = $request->query('sort_direction', 'desc');
         $perPage = $request->query('per_page', 15);
@@ -50,8 +59,8 @@ class GutendexController extends Controller
         // Tạo cache key dựa trên tất cả query parameters
         $cacheKey = "books:list:search:{$search}:category:{$category}:author:{$authorId}:language:{$language}";
         $cacheKey .= ":featured:{$isFeatured}:active:{$isActive}:price:{$priceMin}-{$priceMax}";
-        $cacheKey .= ":year:{$publishedYearMin}-{$publishedYearMax}:sort:{$sortBy}-{$sortDirection}";
-        $cacheKey .= ":page:{$page}:perPage:{$perPage}";
+        $cacheKey .= ":year:{$publishedYearMin}-{$publishedYearMax}:publisher:{$publisher}-{$publisherId}";
+        $cacheKey .= ":sort:{$sortBy}-{$sortDirection}:page:{$page}:perPage:{$perPage}";
         
         // Kiểm tra cache (10 phút)
         if (Cache::has($cacheKey)) {
@@ -59,7 +68,7 @@ class GutendexController extends Controller
         }
         
         // Logic tìm kiếm và query hiện tại
-        $query = Book::with(['authors', 'categories']);
+        $query = Book::with(['authors', 'categories', 'publisher']);
         
         // Filter theo search term
         if ($search) {
@@ -90,6 +99,21 @@ class GutendexController extends Controller
         // Filter theo ngôn ngữ (JSON column)
         if ($language) {
             $query->whereJsonContains('languages', $language);
+        }
+        
+        // Filter theo nhà xuất bản
+        if ($publisher) {
+            $query->where(function($q) use ($publisher) {
+                $q->where('publisher', 'like', "%{$publisher}%")
+                  ->orWhereHas('publisher', function($q2) use ($publisher) {
+                      $q2->where('name', 'like', "%{$publisher}%");
+                  });
+            });
+        }
+        
+        // Filter theo ID nhà xuất bản
+        if ($publisherId) {
+            $query->where('publisher_id', $publisherId);
         }
         
         // Filter featured books
@@ -151,6 +175,8 @@ class GutendexController extends Controller
                     'category' => $category,
                     'author_id' => $authorId,
                     'language' => $language,
+                    'publisher' => $publisher,
+                    'publisher_id' => $publisherId,
                     'is_featured' => $isFeatured,
                     'is_active' => $isActive,
                     'price_min' => $priceMin,
@@ -165,6 +191,24 @@ class GutendexController extends Controller
         
         // Lưu kết quả vào cache (10 phút)
         Cache::put($cacheKey, $result, 600);
+        
+        // Log search activity if there's a search query
+        if ($request->has('search') && $request->input('search')) {
+            $userId = auth()->id();
+            if ($userId) {
+                $this->activityService->log(
+                    $userId,
+                    'search_books',
+                    'Searched for books',
+                    [
+                        'search_query' => $request->input('search'),
+                        'filters' => $request->except(['search', 'page', 'per_page'])
+                    ],
+                    $request->ip(),
+                    $request->userAgent()
+                );
+            }
+        }
         
         return response()->json($result);
     }
@@ -182,7 +226,7 @@ class GutendexController extends Controller
             return response()->json(Cache::get($cacheKey));
         }
         
-        $book = Book::with(['authors', 'categories'])
+        $book = Book::with(['authors', 'categories', 'publisher'])
                     ->where('gutendex_id', $id)
                     ->orWhere('id', $id)
                     ->first();
@@ -201,6 +245,19 @@ class GutendexController extends Controller
         
         // Lưu kết quả vào cache (30 phút)
         Cache::put($cacheKey, $result, 1800);
+        
+        // Log view book activity
+        $userId = auth()->id();
+        if ($userId) {
+            $this->activityService->log(
+                $userId,
+                'view_book',
+                'Viewed book: ' . $book->title,
+                ['book_id' => $book->id],
+                request()->ip(),
+                request()->userAgent()
+            );
+        }
         
         return response()->json($result);
     }
@@ -222,6 +279,19 @@ class GutendexController extends Controller
             
             // Xóa cache liên quan khi thêm sách mới
             $this->clearListCaches();
+            
+            // Log book import activity
+            $userId = auth()->id();
+            if ($userId) {
+                $this->activityService->log(
+                    $userId,
+                    'import_book',
+                    'Imported book from Gutendex',
+                    ['gutendex_id' => $request->input('book_id')],
+                    $request->ip(),
+                    $request->userAgent()
+                );
+            }
         }
         
         return response()->json($result, $result['status']);
@@ -287,6 +357,7 @@ class GutendexController extends Controller
                 'description' => 'sometimes|nullable|string',
                 'published_year' => 'sometimes|nullable|integer',
                 'is_featured' => 'sometimes|boolean',
+                'publisher_id' => 'sometimes|nullable|exists:publishers,id',
                 'authors' => 'sometimes|array',
                 'authors.*.id' => 'exists:authors,id',
                 'categories' => 'sometimes|array',
@@ -295,8 +366,16 @@ class GutendexController extends Controller
             
             // Cập nhật thông tin sách
             $book->fill($request->only([
-                'title', 'description', 'published_year', 'is_featured'
+                'title', 'description', 'published_year', 'is_featured', 'publisher_id'
             ]));
+            
+            // Nếu publisher_id được cập nhật, đảm bảo cập nhật cả tên publisher
+            if ($request->has('publisher_id')) {
+                $publisher = \App\Models\Publisher::find($request->input('publisher_id'));
+                if ($publisher) {
+                    $book->publisher = $publisher->name;
+                }
+            }
             
             $book->save();
             
@@ -319,7 +398,7 @@ class GutendexController extends Controller
             return response()->json([
                 'status' => 200,
                 'message' => 'Book updated successfully',
-                'data' => new BookResource($book->fresh(['authors', 'categories']))
+                'data' => new BookResource($book->fresh(['authors', 'categories', 'publisher']))
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -339,7 +418,22 @@ class GutendexController extends Controller
             'book_ids.*' => 'integer'
         ]);
         
-        $result = $this->gutendexService->bulkImportBooks($request->input('book_ids'));
+        $bookIds = $request->input('book_ids', []);
+        
+        $result = $this->gutendexService->bulkImportBooks($bookIds);
+        
+        // Log bulk import activity
+        $userId = auth()->id();
+        if ($userId) {
+            $this->activityService->log(
+                $userId,
+                'bulk_import_books',
+                'Bulk imported books from Gutendex',
+                ['book_count' => count($bookIds), 'book_ids' => $bookIds],
+                $request->ip(),
+                $request->userAgent()
+            );
+        }
         
         return response()->json($result, $result['status']);
     }
@@ -387,7 +481,7 @@ class GutendexController extends Controller
         
         try {
             $author = Author::findOrFail($authorId);
-            $books = $author->books()->with(['authors', 'categories'])->paginate($perPage);
+            $books = $author->books()->with(['authors', 'categories', 'publisher'])->paginate($perPage);
             
             $result = [
                 'status' => 200,
@@ -405,6 +499,19 @@ class GutendexController extends Controller
             
             // Lưu kết quả vào cache (15 phút)
             Cache::put($cacheKey, $result, 900);
+            
+            // Log view books by author
+            $userId = auth()->id();
+            if ($userId) {
+                $this->activityService->log(
+                    $userId,
+                    'view_author_books',
+                    'Viewed books by author: ' . $author->name,
+                    ['author_id' => $authorId],
+                    $request->ip(),
+                    $request->userAgent()
+                );
+            }
             
             return response()->json($result);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
@@ -459,7 +566,7 @@ class GutendexController extends Controller
         
         try {
             $category = Category::findOrFail($categoryId);
-            $books = $category->books()->with(['authors', 'categories'])->paginate($perPage);
+            $books = $category->books()->with(['authors', 'categories', 'publisher'])->paginate($perPage);
             
             $result = [
                 'status' => 200,
@@ -477,6 +584,19 @@ class GutendexController extends Controller
             
             // Lưu kết quả vào cache (15 phút)
             Cache::put($cacheKey, $result, 900);
+            
+            // Log view books by category
+            $userId = auth()->id();
+            if ($userId) {
+                $this->activityService->log(
+                    $userId,
+                    'view_category_books',
+                    'Viewed books in category: ' . $category->name,
+                    ['category_id' => $categoryId],
+                    $request->ip(),
+                    $request->userAgent()
+                );
+            }
             
             return response()->json($result);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {

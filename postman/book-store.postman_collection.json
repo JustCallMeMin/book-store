@@ -1,9 +1,10 @@
 {
 	"info": {
-		"_postman_id": "5a8d1e72-4ff1-4c10-b3c3-b9d852e8d8e4",
+		"_postman_id": "eb8db666-39f1-426a-80c5-b8f080871b65",
 		"name": "Book Store API",
 		"description": "API Collection for Book Store project",
-		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "34300204"
 	},
 	"item": [
 		{
@@ -11,6 +12,64 @@
 			"item": [
 				{
 					"name": "Register",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"// Generate random email if not set",
+									"if (!pm.environment.get('email')) {",
+									"    const randomEmail = 'test' + Date.now() + '@example.com';",
+									"    pm.environment.set('email', randomEmail);",
+									"    console.log('Generated random email:', randomEmail);",
+									"}",
+									"",
+									"// Set default password if not set",
+									"if (!pm.environment.get('password')) {",
+									"    pm.environment.set('password', 'Password123!');",
+									"    console.log('Set default password');",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Parse response",
+									"var jsonData = pm.response.json();",
+									"",
+									"// Test for successful registration",
+									"pm.test('Registration successful', function() {",
+									"    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+									"    ",
+									"    if (jsonData.error) {",
+									"        console.error('Registration error:', jsonData.error);",
+									"    }",
+									"    ",
+									"    if (jsonData.access_token) {",
+									"        pm.environment.set('authToken', jsonData.access_token);",
+									"        console.log('Auth token saved from registration');",
+									"    }",
+									"});",
+									"",
+									"// Test response structure",
+									"pm.test('Response has correct structure', function() {",
+									"    if (pm.response.code === 201) {",
+									"        pm.expect(jsonData).to.have.property('access_token');",
+									"        pm.expect(jsonData).to.have.property('user');",
+									"        pm.expect(jsonData.user).to.have.property('email');",
+									"    } else if (jsonData.error) {",
+									"        pm.expect(jsonData).to.have.property('error');",
+									"        pm.expect(jsonData).to.have.property('status');",
+									"    }",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
 					"request": {
 						"method": "POST",
 						"header": [
@@ -65,6 +124,26 @@
 									"        expiryDate.setSeconds(expiryDate.getSeconds() + jsonData.expires_in);",
 									"        pm.environment.set('tokenExpiry', expiryDate.getTime());",
 									"    }",
+									"    ",
+									"    // Automatically fetch activities after login",
+									"    setTimeout(function() {",
+									"        pm.sendRequest({",
+									"            url: pm.environment.get('baseUrl') + '/api/activities?limit=1',",
+									"            method: 'GET',",
+									"            header: {",
+									"                'Accept': 'application/json',",
+									"                'Authorization': 'Bearer ' + jsonData.access_token",
+									"            }",
+									"        }, function(err, res) {",
+									"            if (!err && res.code === 200) {",
+									"                var activities = res.json();",
+									"                if (activities.data && activities.data.length > 0 && activities.data[0].id) {",
+									"                    pm.environment.set('activity_id', activities.data[0].id);",
+									"                    console.log('Login activity ID saved: ' + activities.data[0].id);",
+									"                }",
+									"            }",
+									"        });",
+									"    }, 500);",
 									"}",
 									"",
 									"// Test assertions",
@@ -215,7 +294,207 @@
 					"response": []
 				},
 				{
+					"name": "Forgot Password",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"{{email}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/forgot-password",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"forgot-password"
+							]
+						},
+						"description": "Request password reset link"
+					},
+					"response": []
+				},
+				{
+					"name": "Reset Password",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"token\": \"your-reset-token\",\n    \"email\": \"{{email}}\",\n    \"password\": \"NewPassword123!\",\n    \"password_confirmation\": \"NewPassword123!\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/reset-password",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reset-password"
+							]
+						},
+						"description": "Reset password with token received via email"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Current User",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{authToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/user",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"user"
+							]
+						},
+						"description": "Get current authenticated user information"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Profile",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{authToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"first_name\": \"Updated\",\n    \"last_name\": \"Name\",\n    \"email\": \"{{email}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/update-profile",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"update-profile"
+							]
+						},
+						"description": "Update user profile information"
+					},
+					"response": []
+				},
+				{
 					"name": "Logout",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function() {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"var jsonData = pm.response.json();",
+									"",
+									"pm.test(\"Logout successful\", function() {",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.message).to.include('logged out');",
+									"});",
+									"",
+									"// Store the old token to fetch activity before clearing it",
+									"var oldToken = pm.environment.get('authToken');",
+									"",
+									"// Automatically fetch the logout activity",
+									"if (oldToken) {",
+									"    setTimeout(function() {",
+									"        pm.sendRequest({",
+									"            url: pm.environment.get('baseUrl') + '/api/activities?limit=1',",
+									"            method: 'GET',",
+									"            header: {",
+									"                'Accept': 'application/json',",
+									"                'Authorization': 'Bearer ' + oldToken",
+									"            }",
+									"        }, function(err, res) {",
+									"            if (!err && res.code === 200) {",
+									"                var activities = res.json();",
+									"                if (activities.data && activities.data.length > 0 && activities.data[0].id) {",
+									"                    pm.environment.set('activity_id', activities.data[0].id);",
+									"                    console.log('Logout activity ID saved: ' + activities.data[0].id);",
+									"                }",
+									"            } else {",
+									"                console.log('Could not fetch activity after logout: Token may be invalid');",
+									"            }",
+									"            ",
+									"            // Clear the token after fetching activity",
+									"            pm.environment.unset('authToken');",
+									"            console.log('Auth token cleared after logout');",
+									"        });",
+									"    }, 500);",
+									"} else {",
+									"    console.log('No auth token found to clear');",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
 					"request": {
 						"auth": {
 							"type": "bearer",
@@ -245,7 +524,7 @@
 								"logout"
 							]
 						},
-						"description": "Logout and invalidate the token"
+						"description": "Logout from the system"
 					},
 					"response": []
 				},
@@ -286,60 +565,24 @@
 				},
 				{
 					"name": "Refresh Token",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"// Parse response body",
-									"var jsonData = pm.response.json();",
-									"",
-									"// Check if response is successful and contains access_token",
-									"if (pm.response.code === 200 && jsonData.access_token) {",
-									"    // Set the authentication token as environment variable",
-									"    pm.environment.set('authToken', jsonData.access_token);",
-									"    console.log('Auth token refreshed and saved to environment variable');",
-									"    ",
-									"    // Optional: Set the expiration time if returned by the API",
-									"    if (jsonData.expires_in) {",
-									"        var expiryDate = new Date();",
-									"        expiryDate.setSeconds(expiryDate.getSeconds() + jsonData.expires_in);",
-									"        pm.environment.set('tokenExpiry', expiryDate.getTime());",
-									"    }",
-									"}",
-									"",
-									"// Test assertions",
-									"pm.test('Status code is 200', function() {",
-									"    pm.response.to.have.status(200);",
-									"});",
-									"",
-									"pm.test('Response contains refreshed access token', function() {",
-									"    pm.expect(jsonData).to.have.property('access_token');",
-									"});"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
 					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{authToken}}",
-									"type": "string"
-								}
-							]
-						},
 						"method": "POST",
 						"header": [
 							{
 								"key": "Accept",
 								"value": "application/json",
 								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
 							}
 						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"refresh_token\": \"YOUR_REFRESH_TOKEN_HERE\"\n}"
+						},
 						"url": {
 							"raw": "{{baseUrl}}/api/refresh",
 							"host": [
@@ -350,7 +593,7 @@
 								"refresh"
 							]
 						},
-						"description": "Refresh the JWT token when it's about to expire"
+						"description": "Refresh access token using a refresh token"
 					},
 					"response": []
 				},
@@ -504,387 +747,11 @@
 					"response": []
 				}
 			],
-			"description": "API endpoints for authentication operations",
-			"event": [
-				{
-					"listen": "prerequest",
-					"script": {
-						"type": "text/javascript",
-						"exec": [
-							"// Common pre-request script for Authentication folder"
-						]
-					}
-				},
-				{
-					"listen": "test",
-					"script": {
-						"type": "text/javascript",
-						"exec": [
-							"// Common test script for Authentication folder"
-						]
-					}
-				}
-			]
+			"description": "API endpoints for user authentication and account management"
 		},
 		{
 			"name": "Gutendex",
 			"item": [
-				{
-					"name": "Get Books List",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test(\"Status code is 200\", function() {",
-									"    pm.response.to.have.status(200);",
-									"});",
-									"",
-									"pm.test(\"Response contains books array\", function() {",
-									"    const jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property('data');",
-									"    pm.expect(jsonData.data).to.be.an('array');",
-									"});",
-									"",
-									"// Store the first book ID for other tests",
-									"const jsonData = pm.response.json();",
-									"if (jsonData.data && jsonData.data.length > 0) {",
-									"    pm.environment.set('firstBookId', jsonData.data[0].id);",
-									"    console.log('First book ID saved: ' + jsonData.data[0].id);",
-									"}"
-								],
-								"type": "text/javascript"
-							}
-						},
-						{
-							"listen": "prerequest",
-							"script": {
-								"exec": [
-									"// You can set default search parameters here",
-									"// pm.variables.set(\"search\", \"romance\");"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{authToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "GET",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/api/gutendex/books?page=1&search=",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"gutendex",
-								"books"
-							],
-							"query": [
-								{
-									"key": "page",
-									"value": "1"
-								},
-								{
-									"key": "search",
-									"value": ""
-								}
-							]
-						},
-						"description": "Get a list of books from Gutendex API"
-					},
-					"response": []
-				},
-				{
-					"name": "Get Book Details",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test(\"Status code is 200\", function() {",
-									"    pm.response.to.have.status(200);",
-									"});",
-									"",
-									"pm.test(\"Book has required fields\", function() {",
-									"    const jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property('id');",
-									"    pm.expect(jsonData).to.have.property('title');",
-									"    pm.expect(jsonData).to.have.property('author');",
-									"});"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{authToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "GET",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/api/gutendex/books/1342",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"gutendex",
-								"books",
-								"1342"
-							]
-						},
-						"description": "Get details of a specific book by ID"
-					},
-					"response": []
-				},
-				{
-					"name": "Import Book",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test(\"Status code is 201\", function() {",
-									"    pm.response.to.have.status(201);",
-									"});",
-									"",
-									"pm.test(\"Book was imported successfully\", function() {",
-									"    const jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property('message');",
-									"    pm.expect(jsonData.message).to.include('imported');",
-									"    ",
-									"    if (jsonData.book) {",
-									"        pm.environment.set('lastImportedBookId', jsonData.book.id);",
-									"        console.log('Saved last imported book ID: ' + jsonData.book.id);",
-									"    }",
-									"});"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{authToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "POST",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"book_id\": 1342\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/gutendex/books",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"gutendex",
-								"books"
-							]
-						},
-						"description": "Import a book from Gutendex into local database"
-					},
-					"response": []
-				},
-				{
-					"name": "Update Book",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{authToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "PUT",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/api/gutendex/books/1342",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"gutendex",
-								"books",
-								"1342"
-							]
-						},
-						"description": "Update a book information from Gutendex"
-					},
-					"response": []
-				},
-				{
-					"name": "Bulk Import Books",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test(\"Bulk import successful\", function() {",
-									"    pm.response.to.have.status(200);",
-									"    ",
-									"    const jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property('message');",
-									"    pm.expect(jsonData).to.have.property('imported_count');",
-									"    ",
-									"    // Log how many books were imported",
-									"    console.log('Successfully imported ' + jsonData.imported_count + ' books');",
-									"});"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{authToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "POST",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"book_ids\": [1342, 84, 11, 2701, 1661]\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/gutendex/bulk-import",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"gutendex",
-								"bulk-import"
-							]
-						},
-						"description": "Import multiple books from Gutendex at once"
-					},
-					"response": []
-				},
-				{
-					"name": "Import All Books (Admin)",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{adminToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "POST",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/api/gutendex/import-all-books",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"gutendex",
-								"import-all-books"
-							]
-						},
-						"description": "Admin only endpoint to import all books from Gutendex API"
-					},
-					"response": []
-				},
 				{
 					"name": "Delete Book",
 					"request": {
@@ -1085,7 +952,43 @@
 									"    const jsonData = pm.response.json();",
 									"    pm.expect(jsonData).to.have.property('data');",
 									"    pm.expect(jsonData.data.books).to.be.an('array');",
-									"});"
+									"});",
+									"",
+									"// Save the first book from search results if available",
+									"const jsonData = pm.response.json();",
+									"if (jsonData.data && jsonData.data.books && jsonData.data.books.length > 0) {",
+									"    var firstBook = jsonData.data.books[0];",
+									"    ",
+									"    if (firstBook.id) {",
+									"        pm.environment.set('book_id', firstBook.id);",
+									"        console.log('Book ID saved from search: ' + firstBook.id);",
+									"    }",
+									"    ",
+									"    if (firstBook.title) {",
+									"        pm.environment.set('book_title', firstBook.title);",
+									"        console.log('Book title saved from search: ' + firstBook.title);",
+									"    }",
+									"    ",
+									"    // Automatically fetch activities after book search",
+									"    setTimeout(function() {",
+									"        pm.sendRequest({",
+									"            url: pm.environment.get('baseUrl') + '/api/activities?limit=1',",
+									"            method: 'GET',",
+									"            header: {",
+									"                'Accept': 'application/json',",
+									"                'Authorization': 'Bearer ' + pm.environment.get('authToken')",
+									"            }",
+									"        }, function(err, res) {",
+									"            if (!err && res.code === 200) {",
+									"                var activities = res.json();",
+									"                if (activities.data && activities.data.length > 0 && activities.data[0].id) {",
+									"                    pm.environment.set('activity_id', activities.data[0].id);",
+									"                    console.log('Book search activity ID saved: ' + activities.data[0].id);",
+									"                }",
+									"            }",
+									"        });",
+									"    }, 500);",
+									"}"
 								],
 								"type": "text/javascript"
 							}
@@ -1193,96 +1096,6 @@
 					"response": []
 				},
 				{
-					"name": "Test Import",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{authToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "POST",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"batch_size\": 2,\n    \"start_page\": 1,\n    \"max_pages\": 1\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/gutendex/test-import",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"gutendex",
-								"test-import"
-							]
-						},
-						"description": "Test import a small batch of books"
-					},
-					"response": []
-				},
-				{
-					"name": "Direct Import",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{authToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "POST",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"book_id\": 1342\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/gutendex/direct-import",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"gutendex",
-								"direct-import"
-							]
-						},
-						"description": "Import a book directly without using queue"
-					},
-					"response": []
-				},
-				{
 					"name": "Get Suggestions",
 					"request": {
 						"auth": {
@@ -1383,7 +1196,7 @@
 							}
 						],
 						"url": {
-							"raw": "{{baseUrl}}/api/gutendex/books?search=adventure&category=fiction&author_id=1&language=en&is_featured=true&is_active=true&price_min=10&price_max=50&published_year_min=1900&published_year_max=2023&sort_by=download_count&sort_direction=desc&per_page=10&page=1",
+							"raw": "{{baseUrl}}/api/gutendex/books?search=adventure&category=fiction&author_id=1&language=en&is_featured=true&is_active=true&price_min=10&price_max=50&published_year_min=1900&published_year_max=2023&publisher=Delphi%20Classics&publisher_id=1&sort_by=download_count&sort_direction=desc&per_page=10&page=1",
 							"host": [
 								"{{baseUrl}}"
 							],
@@ -1434,6 +1247,14 @@
 									"value": "2023"
 								},
 								{
+									"key": "publisher",
+									"value": "Delphi%20Classics"
+								},
+								{
+									"key": "publisher_id",
+									"value": "1"
+								},
+								{
 									"key": "sort_by",
 									"value": "download_count"
 								},
@@ -1454,9 +1275,816 @@
 						"description": "Get list of books with advanced filtering options"
 					},
 					"response": []
+				},
+				{
+					"name": "Search Books",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function() {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"var jsonData = pm.response.json();",
+									"",
+									"pm.test(\"Search returns results\", function() {",
+									"    pm.expect(jsonData).to.have.property('results');",
+									"    pm.expect(jsonData.results).to.be.an('array');",
+									"});",
+									"",
+									"// Save the first book from search results if available",
+									"if (jsonData.results && jsonData.results.length > 0) {",
+									"    var firstBook = jsonData.results[0];",
+									"    ",
+									"    pm.environment.set('book_id', firstBook.id);",
+									"    console.log('Book ID saved from search: ' + firstBook.id);",
+									"    ",
+									"    if (firstBook.title) {",
+									"        pm.environment.set('book_title', firstBook.title);",
+									"        console.log('Book title saved from search: ' + firstBook.title);",
+									"    }",
+									"    ",
+									"    // Automatically fetch activities after book search",
+									"    setTimeout(function() {",
+									"        pm.sendRequest({",
+									"            url: pm.environment.get('baseUrl') + '/api/activities?limit=1',",
+									"            method: 'GET',",
+									"            header: {",
+									"                'Accept': 'application/json',",
+									"                'Authorization': 'Bearer ' + pm.environment.get('authToken')",
+									"            }",
+									"        }, function(err, res) {",
+									"            if (!err && res.code === 200) {",
+									"                var activities = res.json();",
+									"                if (activities.data && activities.data.length > 0 && activities.data[0].id) {",
+									"                    pm.environment.set('activity_id', activities.data[0].id);",
+									"                    console.log('Book search activity ID saved: ' + activities.data[0].id);",
+									"                }",
+									"            }",
+									"        });",
+									"    }, 500);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{authToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/gutendex/books?search=adventure",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"gutendex",
+								"books"
+							],
+							"query": [
+								{
+									"key": "search",
+									"value": "adventure"
+								}
+							]
+						},
+						"description": "Search books by title or author"
+					},
+					"response": []
 				}
 			],
 			"description": "API endpoints for interacting with Gutendex books"
+		},
+		{
+			"name": "Publishers",
+			"item": [
+				{
+					"name": "Get All Publishers",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{authToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/publishers",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"publishers"
+							]
+						},
+						"description": "Get list of all publishers with book count"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Publisher Details",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{authToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/publishers/{{publisher_id}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"publishers",
+								"{{publisher_id}}"
+							]
+						},
+						"description": "Get details of a specific publisher"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Books by Publisher",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{authToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/publishers/{{publisher_id}}/books?per_page=10&page=1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"publishers",
+								"{{publisher_id}}",
+								"books"
+							],
+							"query": [
+								{
+									"key": "per_page",
+									"value": "10"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								}
+							]
+						},
+						"description": "Get all books by a specific publisher"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Publisher (Admin)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{adminToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"New Publisher Name\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/publishers",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"publishers"
+							]
+						},
+						"description": "Create a new publisher (admin only)"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Publisher (Admin)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{adminToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Updated Publisher Name\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/publishers/{{publisher_id}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"publishers",
+								"{{publisher_id}}"
+							]
+						},
+						"description": "Update an existing publisher (admin only)"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Publisher (Admin)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{adminToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/publishers/{{publisher_id}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"publishers",
+								"{{publisher_id}}"
+							]
+						},
+						"description": "Delete a publisher (admin only, will fail if publisher has books)"
+					},
+					"response": []
+				}
+			],
+			"description": "API endpoints for managing publishers"
+		},
+		{
+			"name": "Admin",
+			"item": [
+				{
+					"name": "Get All Permissions",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{adminToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/permissions",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"permissions"
+							]
+						},
+						"description": "Get all permissions across roles (admin only)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Role Permissions",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{adminToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/permissions/roles/{{role_id}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"permissions",
+								"roles",
+								"{{role_id}}"
+							]
+						},
+						"description": "Get permissions for a specific role (admin only)"
+					},
+					"response": []
+				},
+				{
+					"name": "Import All Books",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{adminToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/gutendex/import-all-books",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"gutendex",
+								"import-all-books"
+							]
+						},
+						"description": "Admin only endpoint to import all books from Gutendex API"
+					},
+					"response": []
+				},
+				{
+					"name": "Clear All Activities",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function() {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Activities cleared successfully\", function() {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.message).to.include('cleared');",
+									"});",
+									"",
+									"// Log to console",
+									"console.log('All user activities have been cleared');",
+									"console.log('Activity ID environment variable is now outdated');",
+									"",
+									"// Optionally unset the activity_id variable since it's no longer valid",
+									"pm.environment.unset('activity_id');",
+									"console.log('Activity ID environment variable has been unset');"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{authToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/activities/clear",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"activities",
+								"clear"
+							]
+						},
+						"description": "Clear all activities for the current user"
+					},
+					"response": []
+				},
+				{
+					"name": "Get User Activities",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{authToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/activities?limit=10&page=1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"activities"
+							],
+							"query": [
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								}
+							]
+						},
+						"description": "Get paginated list of user activities"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Specific Activity",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{authToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/activities/{{activity_id}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"activities",
+								"{{activity_id}}"
+							]
+						},
+						"description": "Get details of a specific user activity"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "User",
+			"item": [
+				{
+					"name": "Get All Favorites",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function() {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"var jsonData = pm.response.json();",
+									"",
+									"pm.test(\"Response has favorites data\", function() {",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data).to.be.an('array');",
+									"});",
+									"",
+									"// Save the first favorite book ID if available",
+									"if (jsonData.success && jsonData.data && jsonData.data.length > 0) {",
+									"    var firstFavorite = jsonData.data[0];",
+									"    ",
+									"    if (firstFavorite.book_id) {",
+									"        pm.environment.set('book_id', firstFavorite.book_id);",
+									"        console.log('First favorite book ID saved: ' + firstFavorite.book_id);",
+									"    }",
+									"    ",
+									"    // Automatically fetch activities after viewing favorites",
+									"    setTimeout(function() {",
+									"        pm.sendRequest({",
+									"            url: pm.environment.get('baseUrl') + '/api/activities?limit=1',",
+									"            method: 'GET',",
+									"            header: {",
+									"                'Accept': 'application/json',",
+									"                'Authorization': 'Bearer ' + pm.environment.get('authToken')",
+									"            }",
+									"        }, function(err, res) {",
+									"            if (!err && res.code === 200) {",
+									"                var activities = res.json();",
+									"                if (activities.data && activities.data.length > 0 && activities.data[0].id) {",
+									"                    pm.environment.set('activity_id', activities.data[0].id);",
+									"                    console.log('View favorites activity ID saved: ' + activities.data[0].id);",
+									"                }",
+									"            }",
+									"        });",
+									"    }, 500);",
+									"} else {",
+									"    console.log('No favorite books found');",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{authToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/favorites",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"favorites"
+							]
+						},
+						"description": "Get all favorite books for the current user"
+					},
+					"response": []
+				},
+				{
+					"name": "Add Book to Favorites",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{authToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/favorites/{{book_id}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"favorites",
+								"{{book_id}}"
+							]
+						},
+						"description": "Add a book to user favorites"
+					},
+					"response": []
+				},
+				{
+					"name": "Remove Book from Favorites",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{authToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/favorites/{{book_id}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"favorites",
+								"{{book_id}}"
+							]
+						},
+						"description": "Remove a book from user favorites"
+					},
+					"response": []
+				},
+				{
+					"name": "Check If Book is in Favorites",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{authToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/favorites/{{book_id}}/check",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"favorites",
+								"{{book_id}}",
+								"check"
+							]
+						},
+						"description": "Check if a book is in user favorites"
+					},
+					"response": []
+				}
+			]
 		}
 	],
 	"event": [
@@ -1518,7 +2146,7 @@
 			"type": "string"
 		},
 		{
-			"key": "adminPassword", 
+			"key": "adminPassword",
 			"value": "Password123!",
 			"type": "string"
 		}

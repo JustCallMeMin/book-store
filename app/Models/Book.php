@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Book extends Model
 {
@@ -35,7 +36,8 @@ class Book extends Model
         'price_note',
         'discount_percent',
         'is_featured',
-        'is_active'
+        'is_active',
+        'publisher_id'
     ];
 
     protected $casts = [
@@ -70,6 +72,14 @@ class Book extends Model
     public function categories(): BelongsToMany
     {
         return $this->belongsToMany(Category::class, 'book_categories');
+    }
+
+    /**
+     * Quan hệ với Publisher
+     */
+    public function publisher(): BelongsTo
+    {
+        return $this->belongsTo(Publisher::class);
     }
 
     /**

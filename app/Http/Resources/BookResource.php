@@ -14,6 +14,12 @@ class BookResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $publisherDetails = null;
+        
+        if ($this->relationLoaded('publisher') && $this->publisher) {
+            $publisherDetails = new PublisherResource($this->publisher);
+        }
+        
         return [
             'id' => $this->id,
             'gutendex_id' => $this->gutendex_id,
@@ -27,6 +33,7 @@ class BookResource extends JsonResource
             'download_count' => $this->download_count,
             'isbn' => $this->isbn,
             'publisher' => $this->publisher,
+            'publisher_id' => $this->publisher_id,
             'published_date' => $this->published_date,
             'description' => $this->description,
             'page_count' => $this->page_count,
@@ -39,6 +46,7 @@ class BookResource extends JsonResource
             'is_active' => $this->is_active,
             'authors' => AuthorResource::collection($this->whenLoaded('authors')),
             'categories' => CategoryResource::collection($this->whenLoaded('categories')),
+            'publisher_details' => $publisherDetails,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

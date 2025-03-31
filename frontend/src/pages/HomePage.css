@@ -1,0 +1,83 @@
+.home-page {
+    padding-bottom: 40px;
+}
+
+.main-banner {
+    margin-bottom: 40px;
+}
+
+.main-banner .carousel-item {
+    height: 400px;
+}
+
+.main-banner img {
+    height: 100%;
+    object-fit: cover;
+}
+
+.main-banner .carousel-caption {
+    background: rgba(0, 0, 0, 0.5);
+    padding: 20px;
+    border-radius: 8px;
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.book-section {
+    margin-bottom: 40px;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.section-header h2 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: bold;
+}
+
+.features {
+    margin-top: 60px;
+    padding: 40px 0;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+}
+
+.feature-item {
+    text-align: center;
+    padding: 20px;
+}
+
+.feature-item i {
+    font-size: 32px;
+    color: var(--primary-color);
+    margin-bottom: 16px;
+}
+
+.feature-item h4 {
+    font-size: 18px;
+    margin-bottom: 8px;
+}
+
+.feature-item p {
+    color: #666;
+    margin: 0;
+}
+
+@media (max-width: 768px) {
+    .main-banner .carousel-item {
+        height: 300px;
+    }
+
+    .main-banner .carousel-caption {
+        padding: 15px;
+    }
+
+    .feature-item {
+        margin-bottom: 20px;
+    }
+} 

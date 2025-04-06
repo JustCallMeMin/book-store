@@ -11,8 +11,10 @@ import {
 import { Link, useNavigate } from "react-router-dom";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import "./AuthPages.css";
+import { connect } from "react-redux";
+import { registerUser } from "src/store/actions/user/userActions";
 
-// HOC để truy cập navigate trong class component
+// HOC to access `navigate` in a class component
 function withRouter(Component) {
     return function WithRouterWrapper(props) {
         const navigate = useNavigate();
@@ -34,8 +36,6 @@ class RegisterPage extends Component {
             showPassword: false,
             showConfirmPassword: false,
             errors: {},
-            serverError: "",
-            loading: false,
         };
     }
 
@@ -77,22 +77,17 @@ class RegisterPage extends Component {
     handleSubmit = async (e) => {
         e.preventDefault();
         if (this.validateForm()) {
-            this.setState({ loading: true });
-            try {
-                // TODO: Implement registration logic
-                console.log("Form submitted:", this.state.formData);
-                this.props.navigate("/login", {
-                    state: {
-                        message: "Đăng ký thành công! Vui lòng đăng nhập.",
-                        type: "success",
-                    },
-                });
-            } catch (error) {
-                this.setState({
-                    serverError: "Có lỗi xảy ra khi đăng ký. Vui lòng thử lại.",
-                });
-            }
-            this.setState({ loading: false });
+            const { firstName, lastName, email, password, confirmPassword } =
+                this.state.formData;
+
+            // Dispatch the registerUser action
+            this.props.registerUser({
+                first_name: firstName,
+                last_name: lastName,
+                email,
+                password,
+                password_confirmation: confirmPassword,
+            });
         }
     };
 
@@ -115,15 +110,24 @@ class RegisterPage extends Component {
         }
     };
 
+    componentDidUpdate(prevProps) {
+        const { registerUserSuccess, navigate } = this.props;
+
+        // Redirect to login page on successful registration
+        if (registerUserSuccess && !prevProps.registerUserSuccess) {
+            navigate("/login", {
+                state: {
+                    message: "Đăng ký thành công! Vui lòng đăng nhập.",
+                    type: "success",
+                },
+            });
+        }
+    }
+
     render() {
-        const {
-            formData,
-            showPassword,
-            showConfirmPassword,
-            errors,
-            serverError,
-            loading,
-        } = this.state;
+        const { formData, showPassword, showConfirmPassword, errors } =
+            this.state;
+        const { loading, registerUserFailureMsg } = this.props;
 
         return (
             <div className="auth-container">
@@ -135,9 +139,9 @@ class RegisterPage extends Component {
                                     <h2 className="text-center">
                                         Đăng ký tài khoản
                                     </h2>
-                                    {serverError && (
+                                    {registerUserFailureMsg && (
                                         <Alert variant="danger">
-                                            {serverError}
+                                            {registerUserFailureMsg}
                                         </Alert>
                                     )}
 
@@ -311,4 +315,17 @@ class RegisterPage extends Component {
     }
 }
 
-export default withRouter(RegisterPage);
+const mapStateToProps = (state) => ({
+    loading: state.userReducer.loading,
+    registerUserFailureMsg: state.userReducer.registerUserFailureMsg,
+    registerUserSuccess: state.userReducer.registerUserSuccess,
+});
+
+const mapDispatchToProps = (dispatch) => ({
+    registerUser: (userData) => dispatch(registerUser(userData)),
+});
+
+export default connect(
+    mapStateToProps,
+    mapDispatchToProps
+)(withRouter(RegisterPage));

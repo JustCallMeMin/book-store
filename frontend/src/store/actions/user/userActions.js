@@ -62,7 +62,7 @@ const registerUserFailure = (error) => ({
 
 export const registerUser = (user) => async (dispatch) => {
     dispatch(registerUserRequest());
-    const apiUrl = BASE_URL + "auth/register";
+    const apiUrl = BASE_URL + "register";
     try {
         const res = await customAxios.post(apiUrl, user, {
             withCredentials: true,
@@ -148,7 +148,7 @@ const updateUserFailure = (error) => ({
 
 export const updateUser = (user) => async (dispatch) => {
     dispatch(updateUserRequest());
-    const apiUrl = `${BASE_URL}auth/update-profile`;
+    const apiUrl = `${BASE_URL}update-profile`;
     try {
         const res = await customAxios.post(apiUrl, user, {
             withCredentials: true,
@@ -225,7 +225,7 @@ const changePasswordFailure = (error) => ({
 
 export const changePassword = (data) => async (dispatch) => {
     dispatch(changePasswordRequest());
-    const apiUrl = BASE_URL + "auth/change-password";
+    const apiUrl = BASE_URL + "change-password";
     try {
         const res = await customAxios.post(apiUrl, data, {
             withCredentials: true,

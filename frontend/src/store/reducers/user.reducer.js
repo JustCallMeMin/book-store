@@ -59,6 +59,7 @@ const initState = {
     getUserListSuccess: false,
     getUserListFailureMsg: "",
     updatingUserStatus: false,
+    updatingUser: false,
     updateUserStatusSuccess: false,
     updateUserStatusFailureMsg: "",
     addingUser: false,
@@ -141,17 +142,17 @@ function userReducer(state = initState, action) {
             };
         case UPDATE_USER_REQUEST:
             return {
+                updatingUserStatus: true,
                 ...state,
-                loading: true,
             };
         case UPDATE_USER_SUCCESS:
             return {
-                loading: false,
+                updatingUserStatus: false,
                 updateUserSuccess: true,
             };
         case UPDATE_USER_FAILURE:
             return {
-                loading: false,
+                updatingUserStatus: false,
                 updateUserFailureMsg: action.payload,
             };
         case DELETE_USER_REQUEST:

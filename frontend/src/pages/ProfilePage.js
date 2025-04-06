@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
     Container,
     Row,
@@ -7,32 +7,34 @@ import {
     Form,
     Button,
     Alert,
-    Nav,
-    Tab,
 } from "react-bootstrap";
-import {
-    FaUser,
-    FaEnvelope,
-    FaPhone,
-    FaMapMarkerAlt,
-    FaLock,
-} from "react-icons/fa";
+import { FaUser, FaEnvelope, FaPhone, FaLock } from "react-icons/fa";
+import { connect } from "react-redux";
 import "./ProfilePage.css";
+import { changePassword, updateUser } from "src/store/actions/user/userActions";
 
 const initialErrors = {
-    submit: "",
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",
 };
 
-const ProfilePage = () => {
-    const [activeTab, setActiveTab] = useState("info");
+const ProfilePage = ({
+    user,
+    updatingUser,
+    updateUserSuccess,
+    updateUserError,
+    changePassword,
+    changingPassword,
+    changePasswordSuccess,
+    changePasswordError,
+    updateUser,
+}) => {
     const [profileData, setProfileData] = useState({
-        name: "Nguyễn Văn A",
-        email: "nguyenvana@example.com",
-        phone: "0123456789",
-        address: "123 Đường ABC, Quận XYZ, TP.HCM",
+        firstName: "",
+        lastName: "",
+        email: "",
+        phone: "",
     });
     const [passwordData, setPasswordData] = useState({
         currentPassword: "",
@@ -40,39 +42,40 @@ const ProfilePage = () => {
         confirmPassword: "",
     });
     const [errors, setErrors] = useState(initialErrors);
-    const [success, setSuccess] = useState("");
-    const [loading, setLoading] = useState(false);
+
+    // Pre-fill profile data from user prop
+    useEffect(() => {
+        if (user) {
+            setProfileData({
+                firstName: user.first_name || "",
+                lastName: user.last_name || "",
+                email: user.email || "",
+                phone: user.phone || "",
+            });
+        }
+    }, [user]);
 
     const handleProfileSubmit = async (e) => {
         e.preventDefault();
-        setLoading(true);
         setErrors(initialErrors);
-        setSuccess("");
 
-        try {
-            await new Promise((resolve) => setTimeout(resolve, 1000));
-            setSuccess("Cập nhật thông tin thành công!");
-        } catch (error) {
-            setErrors((prev) => ({
-                ...prev,
-                submit: "Có lỗi xảy ra khi cập nhật thông tin.",
-            }));
-        }
-        setLoading(false);
+        // Dispatch the updateUser action
+        updateUser({
+            first_name: profileData.firstName,
+            last_name: profileData.lastName,
+            phone: profileData.phone,
+        });
     };
 
     const handlePasswordSubmit = async (e) => {
         e.preventDefault();
-        setLoading(true);
         setErrors(initialErrors);
-        setSuccess("");
 
         if (!passwordData.currentPassword) {
             setErrors((prev) => ({
                 ...prev,
                 currentPassword: "Vui lòng nhập mật khẩu hiện tại",
             }));
-            setLoading(false);
             return;
         }
         if (!passwordData.newPassword) {
@@ -80,7 +83,6 @@ const ProfilePage = () => {
                 ...prev,
                 newPassword: "Vui lòng nhập mật khẩu mới",
             }));
-            setLoading(false);
             return;
         }
         if (passwordData.newPassword.length < 6) {
@@ -88,7 +90,6 @@ const ProfilePage = () => {
                 ...prev,
                 newPassword: "Mật khẩu phải có ít nhất 6 ký tự",
             }));
-            setLoading(false);
             return;
         }
         if (passwordData.newPassword !== passwordData.confirmPassword) {
@@ -96,25 +97,15 @@ const ProfilePage = () => {
                 ...prev,
                 confirmPassword: "Mật khẩu xác nhận không khớp",
             }));
-            setLoading(false);
             return;
         }
 
-        try {
-            await new Promise((resolve) => setTimeout(resolve, 1000));
-            setSuccess("Đổi mật khẩu thành công!");
-            setPasswordData({
-                currentPassword: "",
-                newPassword: "",
-                confirmPassword: "",
-            });
-        } catch (error) {
-            setErrors((prev) => ({
-                ...prev,
-                submit: "Có lỗi xảy ra khi đổi mật khẩu.",
-            }));
-        }
-        setLoading(false);
+        // Dispatch the changePassword action
+        changePassword({
+            current_password: passwordData.currentPassword,
+            new_password: passwordData.newPassword,
+            new_password_confirmation: passwordData.confirmPassword,
+        });
     };
 
     const handleProfileChange = (e) => {
@@ -152,21 +143,24 @@ const ProfilePage = () => {
                                     <FaUser size={40} />
                                 </div>
                                 <div className="profile-info">
-                                    <h4>{profileData.name}</h4>
+                                    <h4>
+                                        {profileData.firstName}{" "}
+                                        {profileData.lastName}
+                                    </h4>
                                     <p className="text-muted mb-0">
                                         {profileData.email}
                                     </p>
                                 </div>
                             </div>
 
-                            {success && (
+                            {updateUserSuccess && (
                                 <Alert variant="success" className="mt-3">
-                                    {success}
+                                    Cập nhật thông tin thành công!
                                 </Alert>
                             )}
-                            {errors.submit && (
+                            {updateUserError && (
                                 <Alert variant="danger" className="mt-3">
-                                    {errors.submit}
+                                    {updateUserError}
                                 </Alert>
                             )}
 
@@ -179,10 +173,23 @@ const ProfilePage = () => {
                                         <FaUser className="icon" />
                                         <Form.Control
                                             type="text"
-                                            name="name"
-                                            value={profileData.name}
+                                            name="firstName"
+                                            value={profileData.firstName}
                                             onChange={handleProfileChange}
-                                            placeholder="Họ tên"
+                                            placeholder="Họ"
+                                        />
+                                    </div>
+                                </Form.Group>
+
+                                <Form.Group className="mb-3 form-group">
+                                    <div className="input-icon">
+                                        <FaUser className="icon" />
+                                        <Form.Control
+                                            type="text"
+                                            name="lastName"
+                                            value={profileData.lastName}
+                                            onChange={handleProfileChange}
+                                            placeholder="Tên"
                                         />
                                     </div>
                                 </Form.Group>
@@ -212,27 +219,13 @@ const ProfilePage = () => {
                                     </div>
                                 </Form.Group>
 
-                                <Form.Group className="mb-4 form-group">
-                                    <div className="input-icon">
-                                        <FaMapMarkerAlt className="icon" />
-                                        <Form.Control
-                                            as="textarea"
-                                            rows={3}
-                                            name="address"
-                                            value={profileData.address}
-                                            onChange={handleProfileChange}
-                                            placeholder="Địa chỉ"
-                                        />
-                                    </div>
-                                </Form.Group>
-
                                 <div className="d-grid">
                                     <Button
                                         type="submit"
                                         className="profile-button"
-                                        disabled={loading}
+                                        disabled={updatingUser}
                                     >
-                                        {loading
+                                        {updatingUser
                                             ? "Đang cập nhật..."
                                             : "Cập nhật thông tin"}
                                     </Button>
@@ -244,6 +237,18 @@ const ProfilePage = () => {
                     <Card className="profile-card">
                         <Card.Body>
                             <h4 className="mb-4">Đổi mật khẩu</h4>
+
+                            {changePasswordSuccess && (
+                                <Alert variant="success" className="mt-3">
+                                    Đổi mật khẩu thành công!
+                                </Alert>
+                            )}
+                            {changePasswordError && (
+                                <Alert variant="danger" className="mt-3">
+                                    {changePasswordError}
+                                </Alert>
+                            )}
+
                             <Form onSubmit={handlePasswordSubmit}>
                                 <Form.Group className="mb-3 form-group">
                                     <div className="input-icon">
@@ -300,9 +305,9 @@ const ProfilePage = () => {
                                     <Button
                                         type="submit"
                                         className="profile-button"
-                                        disabled={loading}
+                                        disabled={changingPassword}
                                     >
-                                        {loading
+                                        {changingPassword
                                             ? "Đang cập nhật..."
                                             : "Đổi mật khẩu"}
                                     </Button>
@@ -316,4 +321,19 @@ const ProfilePage = () => {
     );
 };
 
-export default ProfilePage;
+const mapStateToProps = (state) => ({
+    user: state.userReducer.user,
+    updatingUser: state.userReducer.updatingUser,
+    updateUserSuccess: state.userReducer.updateUserSuccess,
+    updateUserError: state.userReducer.updateUserError,
+    changingPassword: state.userReducer.changingPassword,
+    changePasswordSuccess: state.userReducer.changePasswordSuccess,
+    changePasswordError: state.userReducer.changePasswordError,
+});
+
+const mapDispatchToProps = (dispatch) => ({
+    updateUser: (userData) => dispatch(updateUser(userData)),
+    changePassword: (passwordData) => dispatch(changePassword(passwordData)),
+});
+
+export default connect(mapStateToProps, mapDispatchToProps)(ProfilePage);

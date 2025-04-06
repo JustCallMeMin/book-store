@@ -6,22 +6,26 @@ import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import CategoryBooks from "./pages/CategoryBooks";
 import ProfilePage from "./pages/ProfilePage";
+import { Provider } from "react-redux";
+import store from "./store/config/store";
 
 function App() {
     return (
         <BrowserRouter>
-            <Routes>
-                <Route path="/" element={<ClientLayout />}>
-                    <Route index element={<HomePage />} />
-                    <Route
-                        path="categories/:categoryId"
-                        element={<CategoryBooks />}
-                    />
-                    <Route path="profile" element={<ProfilePage />} />
-                </Route>
-                <Route path="/login" element={<LoginPage />} />
-                <Route path="/register" element={<RegisterPage />} />
-            </Routes>
+            <Provider store={store}>
+                <Routes>
+                    <Route path="/" element={<ClientLayout />}>
+                        <Route index element={<HomePage />} />
+                        <Route
+                            path="categories/:categoryId"
+                            element={<CategoryBooks />}
+                        />
+                        <Route path="profile" element={<ProfilePage />} />
+                    </Route>
+                    <Route path="/login" element={<LoginPage />} />
+                    <Route path="/register" element={<RegisterPage />} />
+                </Routes>
+            </Provider>
         </BrowserRouter>
     );
 }

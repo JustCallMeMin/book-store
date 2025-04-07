@@ -1,4 +1,5 @@
 <?php
+
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\GutendexController;
 use App\Http\Controllers\FavoriteController;
@@ -82,18 +83,18 @@ Route::middleware('auth:api')->group(function () {
         // Basic book routes accessible to all authenticated users
         Route::get('/books', [GutendexController::class, 'index'])->middleware('requires.permission:books:read');
         Route::get('/books/{id}', [GutendexController::class, 'show'])->middleware('requires.permission:books:read');
-        
+
         // Book management routes requiring specific permissions
         Route::post('/books', [GutendexController::class, 'store'])->middleware('requires.permission:books:create');
         Route::delete('/books/{id}', [GutendexController::class, 'destroy'])->middleware('requires.permission:books:delete');
         Route::put('/books/{id}', [GutendexController::class, 'update'])->middleware('requires.permission:books:update');
-        
+
         // Import routes requiring system:import permission
         Route::post('/bulk-import', [GutendexController::class, 'bulkImport'])->middleware('requires.permission:system:import');
         Route::post('/import-all-books', [GutendexController::class, 'importAllBooks'])->middleware('requires.permission:system:import');
         Route::post('/test-import', [GutendexController::class, 'testImport'])->middleware('requires.permission:system:import');
         Route::post('/direct-import', [GutendexController::class, 'directImport'])->middleware('requires.permission:system:import');
-        
+
         // Category routes
         Route::get('/authors', [GutendexController::class, 'authors'])->middleware('requires.permission:books:read');
         Route::get('/authors/{id}/books', [GutendexController::class, 'booksByAuthor'])->middleware('requires.permission:books:read');
@@ -110,9 +111,9 @@ Route::middleware('auth:api')->group(function () {
     });
 
     // Order Routes - Chỉ truy cập với user đã đăng nhập
-    Route::post('/orders', [OrderController::class, 'store']);
-    Route::get('/orders', [OrderController::class, 'index']);
-    Route::get('/orders/{id}', [OrderController::class, 'show']);
+    // Route::post('/orders', [OrderController::class, 'store']);
+    // Route::get('/orders', [OrderController::class, 'index']);
+    // Route::get('/orders/{id}', [OrderController::class, 'show']);
 });
 
 // Tạo named route cho import-all-books

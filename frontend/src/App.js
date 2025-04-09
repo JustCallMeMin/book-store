@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import ClientLayout from "./layouts/ClientLayout";
 import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
+import BookDetail from "./pages/BookDetail";
 import RegisterPage from "./pages/RegisterPage";
 import CategoryBooks from "./pages/CategoryBooks";
 import ProfilePage from "./pages/ProfilePage";
@@ -21,6 +22,7 @@ function App() {
                             element={<CategoryBooks />}
                         />
                         <Route path="profile" element={<ProfilePage />} />
+                        <Route path="book/:id"  element={<BookDetail />} />
                     </Route>
                     <Route path="/login" element={<LoginPage />} />
                     <Route path="/register" element={<RegisterPage />} />

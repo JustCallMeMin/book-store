@@ -52,7 +52,7 @@ function CartSidebar({ show, handleClose, cartItems }) {
                             {cartItems.map((item) => (
                                 <div key={item.id} className="cart-item">
                                     <Image
-                                        src={item.image}
+                                        src={item.cover_image}
                                         alt={item.title}
                                         className="item-image"
                                     />
@@ -61,7 +61,11 @@ function CartSidebar({ show, handleClose, cartItems }) {
                                             {item.title}
                                         </h6>
                                         <p className="item-price">
-                                            {item.price.toLocaleString("vi-VN")}
+                                            {item.price
+                                                ? item.price.toLocaleString(
+                                                      "vi-VN"
+                                                  )
+                                                : "0"}
                                             đ
                                         </p>
                                         <div className="item-actions">

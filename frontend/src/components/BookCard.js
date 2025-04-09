@@ -32,7 +32,7 @@ function BookCard({ book, onCartUpdate }) {
                 <div className="book-image-wrapper">
                     <Card.Img
                         variant="top"
-                        src={book.image}
+                        src={book.cover_image}
                         className="book-image"
                     />
                     <div className="book-actions">

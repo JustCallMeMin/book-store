@@ -1,6 +1,6 @@
 {
 	"info": {
-		"_postman_id": "eb8db666-39f1-426a-80c5-b8f080871b65",
+		"_postman_id": "9fffadc6-2438-4bb9-8c30-14b7dbf9febc",
 		"name": "Book Store API",
 		"description": "API Collection for Book Store project",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
@@ -362,41 +362,6 @@
 					"response": []
 				},
 				{
-					"name": "Get Current User",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{authToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "GET",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/api/user",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"user"
-							]
-						},
-						"description": "Get current authenticated user information"
-					},
-					"response": []
-				},
-				{
 					"name": "Update Profile",
 					"request": {
 						"auth": {
@@ -668,41 +633,6 @@
 					"response": []
 				},
 				{
-					"name": "Get User Profile",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{authToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "GET",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/api/profile",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"profile"
-							]
-						},
-						"description": "Get the authenticated user profile information"
-					},
-					"response": []
-				},
-				{
 					"name": "Change Password",
 					"request": {
 						"auth": {
@@ -745,15 +675,9 @@
 						"description": "Change the authenticated user's password"
 					},
 					"response": []
-				}
-			],
-			"description": "API endpoints for user authentication and account management"
-		},
-		{
-			"name": "Gutendex",
-			"item": [
+				},
 				{
-					"name": "Delete Book",
+					"name": "Get Current User",
 					"request": {
 						"auth": {
 							"type": "bearer",
@@ -765,7 +689,7 @@
 								}
 							]
 						},
-						"method": "DELETE",
+						"method": "GET",
 						"header": [
 							{
 								"key": "Accept",
@@ -774,21 +698,60 @@
 							}
 						],
 						"url": {
-							"raw": "{{baseUrl}}/api/gutendex/books/1342",
+							"raw": "{{baseUrl}}/api/user",
 							"host": [
 								"{{baseUrl}}"
 							],
 							"path": [
 								"api",
-								"gutendex",
-								"books",
-								"1342"
+								"user"
 							]
 						},
-						"description": "Delete a book from the local database"
+						"description": "Get current authenticated user information"
 					},
 					"response": []
 				},
+				{
+					"name": "Get User Profile",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{authToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/profile",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"profile"
+							]
+						},
+						"description": "Get the authenticated user profile information"
+					},
+					"response": []
+				}
+			],
+			"description": "API endpoints for user authentication and account management"
+		},
+		{
+			"name": "Gutendex",
+			"item": [
 				{
 					"name": "Get Authors",
 					"request": {
@@ -1138,43 +1101,6 @@
 					"response": []
 				},
 				{
-					"name": "Clear Suggestions Cache (Admin)",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{adminToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "DELETE",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/api/gutendex/suggestions/clear",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"gutendex",
-								"suggestions",
-								"clear"
-							]
-						},
-						"description": "Clear suggestion cache (admin only)"
-					},
-					"response": []
-				},
-				{
 					"name": "Get Books (with filters)",
 					"request": {
 						"auth": {
@@ -1370,13 +1296,7 @@
 						"description": "Search books by title or author"
 					},
 					"response": []
-				}
-			],
-			"description": "API endpoints for interacting with Gutendex books"
-		},
-		{
-			"name": "Publishers",
-			"item": [
+				},
 				{
 					"name": "Get All Publishers",
 					"request": {
@@ -1496,7 +1416,128 @@
 					"response": []
 				},
 				{
-					"name": "Create Publisher (Admin)",
+					"name": "Delete Book",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{authToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/gutendex/books/1342",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"gutendex",
+								"books",
+								"1342"
+							]
+						},
+						"description": "Delete a book from the local database"
+					},
+					"response": []
+				},
+				{
+					"name": "Clear Suggestions Cache (Admin)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{adminToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/gutendex/suggestions/clear",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"gutendex",
+								"suggestions",
+								"clear"
+							]
+						},
+						"description": "Clear suggestion cache (admin only)"
+					},
+					"response": []
+				}
+			],
+			"description": "API endpoints for interacting with Gutendex books"
+		},
+		{
+			"name": "Admin",
+			"item": [
+				{
+					"name": "Import All Books",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{adminToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/gutendex/import-all-books",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"gutendex",
+								"import-all-books"
+							]
+						},
+						"description": "Admin only endpoint to import all books from Gutendex API"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Publisher",
 					"request": {
 						"auth": {
 							"type": "bearer",
@@ -1539,93 +1580,6 @@
 					},
 					"response": []
 				},
-				{
-					"name": "Update Publisher (Admin)",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{adminToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "PUT",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"name\": \"Updated Publisher Name\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/publishers/{{publisher_id}}",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"publishers",
-								"{{publisher_id}}"
-							]
-						},
-						"description": "Update an existing publisher (admin only)"
-					},
-					"response": []
-				},
-				{
-					"name": "Delete Publisher (Admin)",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{adminToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "DELETE",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/api/publishers/{{publisher_id}}",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"publishers",
-								"{{publisher_id}}"
-							]
-						},
-						"description": "Delete a publisher (admin only, will fail if publisher has books)"
-					},
-					"response": []
-				}
-			],
-			"description": "API endpoints for managing publishers"
-		},
-		{
-			"name": "Admin",
-			"item": [
 				{
 					"name": "Get All Permissions",
 					"request": {
@@ -1695,110 +1649,6 @@
 							]
 						},
 						"description": "Get permissions for a specific role (admin only)"
-					},
-					"response": []
-				},
-				{
-					"name": "Import All Books",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{adminToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "POST",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/api/gutendex/import-all-books",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"gutendex",
-								"import-all-books"
-							]
-						},
-						"description": "Admin only endpoint to import all books from Gutendex API"
-					},
-					"response": []
-				},
-				{
-					"name": "Clear All Activities",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test(\"Status code is 200\", function() {",
-									"    pm.response.to.have.status(200);",
-									"});",
-									"",
-									"pm.test(\"Activities cleared successfully\", function() {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData.success).to.be.true;",
-									"    pm.expect(jsonData.message).to.include('cleared');",
-									"});",
-									"",
-									"// Log to console",
-									"console.log('All user activities have been cleared');",
-									"console.log('Activity ID environment variable is now outdated');",
-									"",
-									"// Optionally unset the activity_id variable since it's no longer valid",
-									"pm.environment.unset('activity_id');",
-									"console.log('Activity ID environment variable has been unset');"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{authToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "DELETE",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/api/activities/clear",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"activities",
-								"clear"
-							]
-						},
-						"description": "Clear all activities for the current user"
 					},
 					"response": []
 				},
@@ -1882,12 +1732,192 @@
 						"description": "Get details of a specific user activity"
 					},
 					"response": []
+				},
+				{
+					"name": "Update Publisher",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{adminToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Updated Publisher Name\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/publishers/{{publisher_id}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"publishers",
+								"{{publisher_id}}"
+							]
+						},
+						"description": "Update an existing publisher (admin only)"
+					},
+					"response": []
+				},
+				{
+					"name": "Clear All Activities",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function() {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Activities cleared successfully\", function() {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.message).to.include('cleared');",
+									"});",
+									"",
+									"// Log to console",
+									"console.log('All user activities have been cleared');",
+									"console.log('Activity ID environment variable is now outdated');",
+									"",
+									"// Optionally unset the activity_id variable since it's no longer valid",
+									"pm.environment.unset('activity_id');",
+									"console.log('Activity ID environment variable has been unset');"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{authToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/activities/clear",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"activities",
+								"clear"
+							]
+						},
+						"description": "Clear all activities for the current user"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Publisher",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{adminToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/publishers/{{publisher_id}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"publishers",
+								"{{publisher_id}}"
+							]
+						},
+						"description": "Delete a publisher (admin only, will fail if publisher has books)"
+					},
+					"response": []
 				}
 			]
 		},
 		{
 			"name": "User",
 			"item": [
+				{
+					"name": "Add Book to Favorites",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{authToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/favorites/{{book_id}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"favorites",
+								"{{book_id}}"
+							]
+						},
+						"description": "Add a book to user favorites"
+					},
+					"response": []
+				},
 				{
 					"name": "Get All Favorites",
 					"event": [
@@ -1976,7 +2006,7 @@
 					"response": []
 				},
 				{
-					"name": "Add Book to Favorites",
+					"name": "Check If Book is in Favorites",
 					"request": {
 						"auth": {
 							"type": "bearer",
@@ -1988,7 +2018,7 @@
 								}
 							]
 						},
-						"method": "POST",
+						"method": "GET",
 						"header": [
 							{
 								"key": "Accept",
@@ -1997,17 +2027,18 @@
 							}
 						],
 						"url": {
-							"raw": "{{baseUrl}}/api/favorites/{{book_id}}",
+							"raw": "{{baseUrl}}/api/favorites/{{book_id}}/check",
 							"host": [
 								"{{baseUrl}}"
 							],
 							"path": [
 								"api",
 								"favorites",
-								"{{book_id}}"
+								"{{book_id}}",
+								"check"
 							]
 						},
-						"description": "Add a book to user favorites"
+						"description": "Check if a book is in user favorites"
 					},
 					"response": []
 				},
@@ -2046,45 +2077,154 @@
 						"description": "Remove a book from user favorites"
 					},
 					"response": []
-				},
+				}
+			]
+		},
+		{
+			"name": "Cart",
+			"item": [
 				{
-					"name": "Check If Book is in Favorites",
+					"name": "Add to Cart",
 					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{authToken}}",
-									"type": "string"
-								}
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"book_id\": 1,\n  \"quantity\": 2\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/cart",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"cart"
 							]
 						},
+						"description": "Add a product to the shopping cart."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Cart",
+					"request": {
 						"method": "GET",
 						"header": [
 							{
 								"key": "Accept",
 								"value": "application/json",
 								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}",
+								"type": "text"
 							}
 						],
 						"url": {
-							"raw": "{{baseUrl}}/api/favorites/{{book_id}}/check",
+							"raw": "{{baseUrl}}/api/cart",
 							"host": [
 								"{{baseUrl}}"
 							],
 							"path": [
 								"api",
-								"favorites",
-								"{{book_id}}",
-								"check"
+								"cart"
 							]
 						},
-						"description": "Check if a book is in user favorites"
+						"description": "Retrieve the current shopping cart for the user."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Cart Item",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"quantity\": 3\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/cart/1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"cart",
+								"1"
+							]
+						},
+						"description": "Update the quantity of a specific product in the cart."
+					},
+					"response": []
+				},
+				{
+					"name": "Remove Cart Item",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/cart/1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"cart",
+								"1"
+							]
+						},
+						"description": "Remove a product from the shopping cart."
 					},
 					"response": []
 				}
-			]
+			],
+			"description": "API endpoints for shopping cart operations."
 		}
 	],
 	"event": [

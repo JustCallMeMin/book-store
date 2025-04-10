@@ -10,6 +10,7 @@ use App\Services\RedisNotificationService;
 use App\Services\RedisPermissionService;
 use App\Services\RedisCartService;
 use App\Services\RedisImportLogService;
+use App\Services\CartService;
 
 class RedisServiceProvider extends ServiceProvider
 {
@@ -34,6 +35,9 @@ class RedisServiceProvider extends ServiceProvider
         $this->app->singleton(RedisCartService::class, function ($app) {
             return new RedisCartService();
         });
+        
+        // Bind the CartService interface to RedisCartService implementation
+        $this->app->bind(CartService::class, RedisCartService::class);
 
         $this->app->singleton(RedisImportLogService::class, function ($app) {
             return new RedisImportLogService();

@@ -1,0 +1,80 @@
+# Hướng dẫn sử dụng API Import Sách (Đã cập nhật)
+
+## PowerShell Command (Windows)
+```powershell
+Invoke-WebRequest -Uri "http://localhost:8000/api/gutendex/import-all-books" -Method POST -Headers @{"Authorization"="Bearer your_token_here"; "Content-Type"="application/json"} -Body '{"batch_size": 3, "max_pages": 2}' -UseBasicParsing | Select-Object -ExpandProperty Content
+```
+
+## Curl Command (Git Bash/Linux/Mac)
+```bash
+curl -X POST -H "Content-Type: application/json" -H "Authorization: Bearer your_token_here" -d '{"batch_size": 3, "max_pages": 2}' http://localhost:8000/api/gutendex/import-all-books
+```
+
+## Postman Configuration
+- URL: `http://localhost:8000/api/gutendex/import-all-books`
+- Method: `POST`
+- Headers:
+  - `Content-Type: application/json`
+  - `Authorization: Bearer your_token_here`
+- Body (raw JSON):
+```json
+{
+  "batch_size": 3,
+  "max_pages": 2,
+  "start_page": 1
+}
+```
+
+# Tham số API
+
+| Tham số     | Mô tả                                  | Mặc định | Giới hạn           |
+|-------------|----------------------------------------|----------|-------------------|
+| batch_size  | Số sách trong mỗi batch                | 5        | 1-10 (khuyến nghị) |
+| max_pages   | Số trang tối đa sẽ import              | 10       | Không giới hạn     |
+| start_page  | Trang bắt đầu import                   | 1        | Không giới hạn     |
+
+# Yêu cầu quyền
+
+API này yêu cầu người dùng có quyền `system:import`. Vui lòng đảm bảo token của bạn thuộc về tài khoản có quyền này.
+
+# Cập nhật mới (Phiên bản 2.0)
+
+Phiên bản mới của API import đã được cải tiến:
+
+1. **Đơn giản hóa quy trình**: Giảm độ phức tạp và khả năng lỗi
+2. **Loại bỏ phụ thuộc Redis**: Log được lưu trực tiếp vào database thay vì qua Redis
+3. **Cải thiện hiệu suất**: Quá trình xử lý nhẹ hơn, sử dụng ít bộ nhớ hơn
+4. **Tăng độ ổn định**: Xử lý lỗi tốt hơn, không còn lỗi "Array to string conversion"
+
+# Cách theo dõi quá trình import
+
+## Kiểm tra log trong database
+
+```sql
+SELECT * FROM import_logs ORDER BY created_at DESC LIMIT 20;
+```
+
+## Xem log Laravel
+
+```
+tail -f storage/logs/laravel-*.log
+```
+
+# Các loại API khác
+
+1. **Test Import (ít dữ liệu):**
+```
+POST http://localhost:8000/api/gutendex/test-import
+```
+
+2. **Direct Import (chỉ 1 sách):**
+```
+POST http://localhost:8000/api/gutendex/direct-import
+```
+Tham số: `book_id` (ID của sách cần import)
+
+# Hướng dẫn debug
+
+Để xem log của quá trình import:
+- Kiểm tra log Laravel tại `storage/logs/laravel-*.log`
+- Sử dụng endpoint: `GET http://localhost:8000/api/gutendex/import-logs` để xem log import 

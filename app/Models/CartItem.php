@@ -16,14 +16,14 @@ class CartItem extends Model
         'quantity',
         'unit_price',
         'discount_amount',
-        'final_price'
+        'final_price',
     ];
 
     protected $casts = [
         'quantity' => 'integer',
         'unit_price' => 'decimal:2',
         'discount_amount' => 'decimal:2',
-        'final_price' => 'decimal:2'
+        'final_price' => 'decimal:2',
     ];
 
     /**
@@ -40,5 +40,13 @@ class CartItem extends Model
     public function book(): BelongsTo
     {
         return $this->belongsTo(Book::class);
+    }
+
+    /**
+     * Lấy tổng giá trị của item
+     */
+    public function getSubtotalAttribute(): float
+    {
+        return $this->quantity * $this->final_price;
     }
 }

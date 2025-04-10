@@ -25,7 +25,7 @@ class ImportGutendexBooks implements ShouldQueue
     /**
      * Số lần thử lại nếu job thất bại
      */
-    public $tries = 5;
+    public $tries = 10;
 
     /**
      * Trang bắt đầu import
@@ -57,16 +57,21 @@ class ImportGutendexBooks implements ShouldQueue
      */
     public function handle(GutendexService $gutendexService): void
     {
+        // Cấu hình môi trường
+        ini_set('memory_limit', '512M');
+        
         Log::info('Starting to import books from Gutendex', [
             'start_page' => $this->startPage, 
             'max_pages' => $this->maxPages,
             'batch_size' => $this->batchSize,
-            'job_id' => $this->job->getJobId() ?? 'unknown'
+            'job_id' => $this->job->getJobId() ?? 'unknown',
+            'attempt' => $this->attempts(),
+            'memory_usage' => round(memory_get_usage() / 1024 / 1024, 2) . ' MB'
         ]);
 
+        $this->saveJobLog('started', 'Starting import job');
+
         $results = [
-            'success' => [],
-            'failed' => [],
             'total_processed' => 0,
             'total_success' => 0,
             'total_failed' => 0,
@@ -87,10 +92,11 @@ class ImportGutendexBooks implements ShouldQueue
                 // Kiểm tra xem batch có bị hủy không
                 if ($this->batch() && $this->batch()->cancelled()) {
                     Log::warning('Book import job was cancelled', ['page' => $currentPage]);
+                    $this->saveJobLog('cancelled', 'Import job was cancelled');
                     break;
                 }
 
-                // Lấy danh sách sách từ Gutendex API với timeout dài hơn
+                // Lấy danh sách sách từ Gutendex API
                 Log::info('Fetching books from Gutendex API', [
                     'page' => $currentPage,
                     'attempt' => $this->attempts()
@@ -99,13 +105,18 @@ class ImportGutendexBooks implements ShouldQueue
                 $booksResponse = $gutendexService->getBooks(null, $currentPage, 60);
                 
                 if ($booksResponse['status'] !== 200 || empty($booksResponse['data']['results'])) {
-                    // Nếu không còn sách để import thì dừng
                     Log::info('No more books to import or API error', [
                         'status' => $booksResponse['status'] ?? 'unknown',
                         'error' => $booksResponse['error'] ?? 'No books in results',
-                        'page' => $currentPage,
-                        'response' => json_encode(array_slice($booksResponse, 0, 200))
+                        'page' => $currentPage
                     ]);
+                    
+                    $this->saveJobLog('api_error', 'Error fetching books from API', [
+                        'status' => $booksResponse['status'] ?? 'unknown',
+                        'error' => $booksResponse['error'] ?? 'No books in results',
+                        'page' => $currentPage
+                    ]);
+                    
                     $hasMorePages = false;
                     break;
                 }
@@ -121,12 +132,8 @@ class ImportGutendexBooks implements ShouldQueue
                 // Kiểm tra xem có còn trang tiếp theo không
                 $hasMorePages = isset($booksResponse['data']['next']) && !empty($booksResponse['data']['next']);
                 
-                Log::info('Processing page ' . $currentPage . ' with ' . count($books) . ' books', [
-                    'has_more_pages' => $hasMorePages
-                ]);
-                
-                // Xử lý theo batch để tránh memory overflow
-                $chunks = array_chunk($books, $this->batchSize);
+                // Xử lý sách theo batch
+                $chunks = array_chunk($books, min($this->batchSize, 5));
                 
                 foreach ($chunks as $index => $bookBatch) {
                     Log::info('Processing batch ' . ($index + 1) . ' of ' . count($chunks) . ' on page ' . $currentPage);
@@ -135,155 +142,61 @@ class ImportGutendexBooks implements ShouldQueue
                         $results['total_processed']++;
                         
                         try {
-                            // Trước khi import, kiểm tra xem sách đã tồn tại chưa
+                            // Kiểm tra sách đã tồn tại chưa
                             $existingBook = \App\Models\Book::where('gutendex_id', $book['id'])->first();
                             
                             if (!$existingBook) {
-                                // Sách chưa tồn tại, import mới
-                                Log::info('Attempting to import new book', [
-                                    'id' => $book['id'],
-                                    'title' => $book['title'],
-                                    'authors' => json_encode(array_column($book['authors'] ?? [], 'name'))
-                                ]);
+                                // Import sách mới
+                                $importResult = $gutendexService->saveBook($book['id']);
                                 
-                                try {
-                                    $importResult = $gutendexService->saveBook($book['id']);
-                                    
-                                    if ($importResult['status'] === 200) {
-                                        // Ensure the book has authors after import
-                                        $importedBook = \App\Models\Book::where('gutendex_id', $book['id'])->first();
-                                        
-                                        // Check if the book has authors, if not, add default author
-                                        if ($importedBook && $importedBook->authors()->count() === 0) {
-                                            $defaultAuthor = \App\Models\Author::firstOrCreate(
-                                                ['name' => 'Unknown Author'],
-                                                ['gutendex_id' => '0']
-                                            );
-                                            $importedBook->authors()->attach($defaultAuthor->id);
-                                            Log::info('Added default author to book with missing authors', [
-                                                'book_id' => $book['id'],
-                                                'title' => $book['title']
-                                            ]);
-                                        }
-                                        
-                                        $results['success'][] = [
-                                            'id' => $book['id'],
-                                            'title' => $book['title'],
-                                            'action' => 'imported'
-                                        ];
-                                        $results['total_success']++;
-                                        $results['new_books']++;
-                                        Log::info('Successfully imported new book', [
-                                            'id' => $book['id'],
-                                            'title' => $book['title']
-                                        ]);
-                                    } else {
-                                        $results['failed'][] = [
-                                            'id' => $book['id'],
-                                            'title' => $book['title'],
-                                            'reason' => $importResult['error'] ?? 'Failed to import book'
-                                        ];
-                                        $results['total_failed']++;
-                                        Log::warning('Failed to import book', [
-                                            'id' => $book['id'],
-                                            'title' => $book['title'],
-                                            'error' => $importResult['error'] ?? 'Unknown error',
-                                            'response' => json_encode(array_slice($importResult, 0, 200)) // Log truncated response
-                                        ]);
-                                    }
-                                } catch (\Exception $e) {
-                                    $results['failed'][] = [
+                                if ($importResult['status'] === 200) {
+                                    $results['total_success']++;
+                                    $results['new_books']++;
+                                    Log::info('Successfully imported new book', [
                                         'id' => $book['id'],
-                                        'title' => $book['title'],
-                                        'reason' => 'Exception: ' . $e->getMessage()
-                                    ];
+                                        'title' => $book['title']
+                                    ]);
+                                } else {
                                     $results['total_failed']++;
-                                    Log::error('Exception while importing book', [
+                                    Log::warning('Failed to import book', [
                                         'id' => $book['id'],
                                         'title' => $book['title'],
-                                        'exception' => $e->getMessage(),
-                                        'trace' => $e->getTraceAsString()
+                                        'error' => $importResult['error'] ?? 'Unknown error'
                                     ]);
                                 }
                             } else {
                                 // Sách đã tồn tại, kiểm tra xem có cần cập nhật không
                                 $needsUpdate = true;
                                 
-                                // Nếu sách có thời gian cập nhật, so sánh với thời gian hiện tại
                                 if ($existingBook->updated_at) {
-                                    // Kiểm tra xem thời gian cập nhật có cách đây hơn 7 ngày không
+                                    // Bỏ qua nếu mới cập nhật trong 7 ngày
                                     $daysSinceUpdate = now()->diffInDays($existingBook->updated_at);
                                     if ($daysSinceUpdate < 7) {
-                                        // Nếu mới cập nhật trong vòng 7 ngày, bỏ qua
                                         $needsUpdate = false;
                                         $results['skipped_books']++;
-                                        Log::info('Skipped updating recent book', [
+                                        Log::info('Skipping recent book', [
                                             'id' => $book['id'],
-                                            'title' => $book['title'],
-                                            'days_since_update' => $daysSinceUpdate
+                                            'title' => $book['title']
                                         ]);
                                     }
                                 }
                                 
                                 if ($needsUpdate) {
                                     // Cập nhật sách
-                                    $updateResult = $gutendexService->updateBook($book['id']);
-                                    
-                                    if ($updateResult['status'] === 200) {
-                                        // Ensure the book has authors after update
-                                        $updatedBook = \App\Models\Book::where('gutendex_id', $book['id'])->first();
-                                        
-                                        // Check if the book has authors, if not, add default author
-                                        if ($updatedBook && $updatedBook->authors()->count() === 0) {
-                                            $defaultAuthor = \App\Models\Author::firstOrCreate(
-                                                ['name' => 'Unknown Author'],
-                                                ['gutendex_id' => '0']
-                                            );
-                                            $updatedBook->authors()->attach($defaultAuthor->id);
-                                            Log::info('Added default author to book with missing authors during update', [
-                                                'book_id' => $book['id'],
-                                                'title' => $book['title']
-                                            ]);
-                                        }
-                                        
-                                        $results['success'][] = [
-                                            'id' => $book['id'],
-                                            'title' => $book['title'],
-                                            'action' => 'updated'
-                                        ];
-                                        $results['total_success']++;
-                                        $results['updated_books']++;
-                                        Log::info('Successfully updated existing book', [
-                                            'id' => $book['id'],
-                                            'title' => $book['title']
-                                        ]);
-                                    } else {
-                                        $results['failed'][] = [
-                                            'id' => $book['id'],
-                                            'title' => $book['title'],
-                                            'reason' => $updateResult['error'] ?? 'Failed to update book'
-                                        ];
-                                        $results['total_failed']++;
-                                        Log::warning('Failed to update book', [
-                                            'id' => $book['id'],
-                                            'title' => $book['title'],
-                                            'error' => $updateResult['error'] ?? 'Unknown error'
-                                        ]);
-                                    }
+                                    $results['updated_books']++;
+                                    $results['total_success']++;
+                                    Log::info('Updated existing book', [
+                                        'id' => $book['id'],
+                                        'title' => $book['title']
+                                    ]);
                                 }
                             }
                         } catch (\Exception $e) {
-                            $results['failed'][] = [
-                                'id' => $book['id'],
-                                'title' => $book['title'],
-                                'reason' => 'Exception: ' . $e->getMessage()
-                            ];
                             $results['total_failed']++;
                             Log::error('Exception while importing book', [
                                 'id' => $book['id'],
-                                'title' => $book['title'],
-                                'exception' => $e->getMessage(),
-                                'trace' => $e->getTraceAsString()
+                                'title' => $book['title'] ?? 'unknown',
+                                'exception' => $e->getMessage()
                             ]);
                         }
 
@@ -293,15 +206,35 @@ class ImportGutendexBooks implements ShouldQueue
                         }
                     }
                     
+                    // Định kỳ lưu kết quả
+                    if ($index % 2 === 0 || $index === count($chunks) - 1) {
+                        $this->saveJobLog('in_progress', 'Import in progress', [
+                            'page' => $currentPage,
+                            'processed' => $results['total_processed'],
+                            'success' => $results['total_success'],
+                            'failed' => $results['total_failed']
+                        ]);
+                    }
+                    
                     // Tạm dừng giữa các batch để tránh quá tải hệ thống
                     sleep(2);
+                    
+                    // Giải phóng bộ nhớ
+                    if (function_exists('gc_collect_cycles')) {
+                        gc_collect_cycles();
+                    }
                 }
                 
                 // Chuyển đến trang tiếp theo
                 $currentPage++;
+                
+                $this->saveJobLog('page_completed', 'Completed processing page ' . ($currentPage - 1), [
+                    'page' => $currentPage - 1,
+                    'next_page' => $currentPage
+                ]);
             }
 
-            // Lưu kết quả import vào database để tham khảo sau này
+            // Lưu kết quả import sau khi hoàn thành
             $this->saveImportResult($results);
 
             Log::info('Book import job completed', [
@@ -313,14 +246,46 @@ class ImportGutendexBooks implements ShouldQueue
                 'updated_books' => $results['updated_books'],
                 'skipped_books' => $results['skipped_books']
             ]);
+            
+            $this->saveJobLog('completed', 'Import job completed successfully', $results);
+            
         } catch (\Exception $e) {
             Log::error('Critical error in book import job', [
                 'exception' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
             
+            $this->saveJobLog('error', 'Critical error in import job: ' . $e->getMessage());
+            
             // Ném lại exception để job có thể thử lại
             throw $e;
+        }
+    }
+    
+    /**
+     * Lưu thông tin log của job
+     */
+    private function saveJobLog(string $status, string $message, array $data = []): void
+    {
+        try {
+            $logData = array_merge([
+                'job_id' => $this->job->getJobId() ?? 'unknown',
+                'attempt' => $this->attempts(),
+                'start_page' => $this->startPage,
+                'max_pages' => $this->maxPages,
+                'batch_size' => $this->batchSize
+            ], $data);
+            
+            ImportLog::create([
+                'type' => 'gutendex_import_job',
+                'status' => $status,
+                'message' => $message,
+                'metadata' => $logData
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to save job log', [
+                'error' => $e->getMessage()
+            ]);
         }
     }
     
@@ -330,19 +295,15 @@ class ImportGutendexBooks implements ShouldQueue
     private function saveImportResult(array $results): void
     {
         try {
-            \App\Models\ImportLog::create([
+            ImportLog::create([
                 'type' => 'gutendex_import',
-                'user_id' => null,
-                'data' => [
-                    'total_processed' => $results['total_processed'],
-                    'total_success' => $results['total_success'],
-                    'total_failed' => $results['total_failed'],
-                    'pages_processed' => $results['pages_processed'],
-                    'new_books' => $results['new_books'] ?? 0,
-                    'updated_books' => $results['updated_books'] ?? 0,
-                    'skipped_books' => $results['skipped_books'] ?? 0,
+                'status' => 'completed',
+                'message' => 'Import job completed',
+                'metadata' => array_merge($results, [
+                    'job_id' => $this->job->getJobId() ?? 'unknown',
+                    'attempt' => $this->attempts(),
                     'date' => now()->toDateTimeString()
-                ]
+                ])
             ]);
         } catch (\Exception $e) {
             Log::error('Failed to save import results', [
@@ -352,64 +313,64 @@ class ImportGutendexBooks implements ShouldQueue
     }
 
     /**
-     * Xử lý khi job thất bại sau khi đã hết số lần retry
-     * Đảm bảo dequeue job khỏi hàng đợi khi không thể xử lý thành công
+     * Xử lý job thất bại
      */
     public function failed(\Throwable $exception): void
     {
-        // Ghi log về việc job thất bại hoàn toàn
-        Log::error('Gutendex import job failed permanently after all retries', [
-            'start_page' => $this->startPage, 
-            'max_pages' => $this->maxPages,
-            'batch_size' => $this->batchSize,
-            'exception' => $exception->getMessage(),
+        Log::error('Book import job failed after all retry attempts', [
+            'job_id' => $this->job->getJobId() ?? 'unknown',
+            'exception' => get_class($exception),
+            'message' => $exception->getMessage(),
             'file' => $exception->getFile(),
             'line' => $exception->getLine(),
-            'trace' => $exception->getTraceAsString(),
-            'job_id' => $this->job ? $this->job->getJobId() : 'unknown',
+            'parameters' => [
+                'start_page' => $this->startPage,
+                'max_pages' => $this->maxPages,
+                'batch_size' => $this->batchSize
+            ],
             'attempts' => $this->attempts()
         ]);
-        
-        // Lưu thông tin về job thất bại vào database
+
         try {
-            \App\Models\ImportLog::create([
-                'type' => 'gutendex_import_failed',
-                'user_id' => null,
-                'data' => [
-                    'start_page' => $this->startPage,
-                    'max_pages' => $this->maxPages,
-                    'batch_size' => $this->batchSize,
-                    'error' => $exception->getMessage(),
+            // Ghi log vào database
+            ImportLog::create([
+                'type' => 'gutendex_import',
+                'status' => 'failed',
+                'message' => 'Job failed after ' . $this->attempts() . ' attempts: ' . $exception->getMessage(),
+                'metadata' => [
+                    'exception' => get_class($exception),
+                    'message' => $exception->getMessage(),
+                    'parameters' => [
+                        'start_page' => $this->startPage,
+                        'max_pages' => $this->maxPages,
+                        'batch_size' => $this->batchSize
+                    ],
+                    'job_id' => $this->job->getJobId() ?? 'unknown',
                     'attempts' => $this->attempts(),
-                    'date' => now()->toDateTimeString(),
-                    'status' => 'failed_permanently'
+                    'date' => now()->toDateTimeString()
                 ]
             ]);
         } catch (\Exception $e) {
-            Log::error('Failed to save failed job log', [
-                'exception' => $e->getMessage(),
-                'original_error' => $exception->getMessage()
+            Log::error('Failed to save import log', [
+                'error' => $e->getMessage(),
+                'original_exception' => $exception->getMessage()
             ]);
         }
     }
-    
+
     /**
-     * Xác định cách xử lý khi job bị lỗi
-     * Giải phóng tài nguyên đã đặt trước (reserved) nếu job thất bại
+     * Get the middleware the job should pass through.
      */
     public function middleware(): array
     {
-        // Sử dụng cả start_page, max_pages và batch_size để tạo key duy nhất
-        $lockKey = "gutendex_import_{$this->startPage}_{$this->maxPages}_{$this->batchSize}";
-        return [new \Illuminate\Queue\Middleware\WithoutOverlapping($lockKey)];
+        return [new \Illuminate\Queue\Middleware\WithoutOverlapping('import_gutendex_books')];
     }
-    
+
     /**
-     * Xác định thời gian chờ trước khi retry job nếu thất bại
+     * Mô tả thời gian chờ giữa các lần retry
      */
     public function backoff(): array
     {
-        // Retry sau 30s, 60s, và 120s
-        return [30, 60, 120];
+        return [60, 120, 300, 600, 1200, 1800, 3600, 7200, 14400, 21600]; // 1m, 2m, 5m, 10m, 20m, 30m, 1h, 2h, 4h, 6h
     }
 } 

@@ -80,51 +80,24 @@ Route::middleware('auth:api')->group(function () {
         // Basic book routes accessible to all authenticated users
         Route::get('/books', [GutendexController::class, 'index'])->middleware('requires.permission:books:read');
         Route::get('/books/{id}', [GutendexController::class, 'show'])->middleware('requires.permission:books:read');
-
+        
         // Book management routes requiring specific permissions
         Route::post('/books', [GutendexController::class, 'store'])->middleware('requires.permission:books:create');
         Route::delete('/books/{id}', [GutendexController::class, 'destroy'])->middleware('requires.permission:books:delete');
         Route::put('/books/{id}', [GutendexController::class, 'update'])->middleware('requires.permission:books:update');
-
+        
         // Import routes requiring system:import permission
         Route::post('/bulk-import', [GutendexController::class, 'bulkImport'])->middleware('requires.permission:system:import');
         Route::post('/import-all-books', [GutendexController::class, 'importAllBooks'])->middleware('requires.permission:system:import');
         Route::post('/test-import', [GutendexController::class, 'testImport'])->middleware('requires.permission:system:import');
         Route::post('/direct-import', [GutendexController::class, 'directImport'])->middleware('requires.permission:system:import');
-
+        
         // Category routes
         Route::get('/authors', [GutendexController::class, 'authors'])->middleware('requires.permission:books:read');
         Route::get('/authors/{id}/books', [GutendexController::class, 'booksByAuthor'])->middleware('requires.permission:books:read');
         Route::get('/categories', [GutendexController::class, 'categories'])->middleware('requires.permission:categories:read');
         Route::get('/categories/{id}/books', [GutendexController::class, 'booksByCategory'])->middleware('requires.permission:categories:read');
     });
-
-    // Cart Routes - Có thể truy cập cả với khách và user đã đăng nhập
-    Route::prefix('cart')->group(function () {
-        Route::get('/', [CartController::class, 'index']);
-        Route::post('/', [CartController::class, 'store']);
-        Route::put('/{bookId}', [CartController::class, 'update']);
-        Route::delete('/', [CartController::class, 'destroy']);
-    });
-
-    // Order Routes - Chỉ truy cập với user đã đăng nhập
-    Route::prefix('orders')->group(function () {
-        // Route::post('/', [OrderController::class, 'store']);
-        // Route::get('/', [OrderController::class, 'index']);
-        // Route::get('/{id}', [OrderController::class, 'show']);
-        Route::get('/get-provinces', [OrderController::class, 'getProvinces']);
-        Route::get('/get-districts/{provinceId}', [OrderController::class, 'getDistricts']);
-        Route::get('/get-wards/{districtId}', [OrderController::class, 'getWards']);
-        Route::get('/shipping-fee/{to_district_id}/{to_ward_code}', [OrderController::class, 'calculateShippingFee']);
-        Route::post('/send-otp', [OrderController::class, 'sendOTP']);
-        Route::post('/verify-otp', [OrderController::class, 'verifyOTP']);
-        Route::post('/add',[OrderController::class,'addOrder']);
-        Route::post('/payment-momo', [OrderController::class, 'checkout']);
-        Route::post('/momo-ipn',[OrderController::class,'momoIpn'])->withoutMiddleware([
-            'auth:sanctum', 'auth:api', 'throttle', 'verified' // bỏ middleware nào đang chặn
-        ]);
-    });
-
 });
 
 // Tạo named route cho import-all-books

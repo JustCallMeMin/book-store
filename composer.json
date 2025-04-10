@@ -11,9 +11,7 @@
         "laravel/socialite": "^5.18",
         "laravel/tinker": "^2.10.1",
         "php-open-source-saver/jwt-auth": "^2.8",
-        "predis/predis": "^2.3",
-        "twilio/sdk": "^8.4",
-        "vonage/client": "^4.1"
+        "predis/predis": "^2.3"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",

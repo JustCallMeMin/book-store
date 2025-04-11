@@ -16,14 +16,15 @@ class Cart extends Model
     protected $keyType = 'string';
 
     protected $fillable = [
+        'id',
         'user_id',
         'session_id',
         'total_items',
         'total_amount',
         'discount_amount',
         'final_amount',
-        'expires_at',
         'is_guest',
+        'expires_at',
         'last_activity'
     ];
 
@@ -32,9 +33,9 @@ class Cart extends Model
         'total_amount' => 'decimal:2',
         'discount_amount' => 'decimal:2',
         'final_amount' => 'decimal:2',
+        'is_guest' => 'boolean',
         'expires_at' => 'datetime',
-        'last_activity' => 'datetime',
-        'is_guest' => 'boolean'
+        'last_activity' => 'datetime'
     ];
 
     protected static function boot()
@@ -49,18 +50,34 @@ class Cart extends Model
     }
 
     /**
-     * Lấy tất cả các item trong giỏ hàng
+     * Lấy danh sách các item trong giỏ hàng
      */
-    public function cartItems(): HasMany
+    public function items(): HasMany
     {
         return $this->hasMany(CartItem::class);
     }
 
     /**
-     * Lấy thông tin người dùng (nếu có)
+     * Lấy thông tin người dùng sở hữu giỏ hàng
      */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Kiểm tra giỏ hàng đã hết hạn chưa
+     */
+    public function isExpired(): bool
+    {
+        return $this->expires_at && $this->expires_at->isPast();
+    }
+
+    /**
+     * Cập nhật thời gian hoạt động cuối cùng
+     */
+    public function updateLastActivity(): void
+    {
+        $this->update(['last_activity' => now()]);
     }
 }

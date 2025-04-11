@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
 use App\Services\RedisImportLogService;
 use App\Services\RedisActivityService;
+use App\Services\RedisPermissionService;
 
 class GutendexController extends Controller
 {
@@ -298,39 +299,57 @@ class GutendexController extends Controller
     }
 
     /**
-     * Xóa sách khỏi database
+     * Xóa một cuốn sách khỏi database
      */
     public function destroy($id)
     {
+        $book = Book::where('gutendex_id', $id)
+                    ->orWhere('id', $id)
+                    ->first();
+
+        if (!$book) {
+            return response()->json([
+                'status' => 404,
+                'error' => 'Book not found in database'
+            ], 404);
+        }
+
         try {
-            $book = Book::where('gutendex_id', $id)
-                        ->orWhere('id', $id)
-                        ->first();
-            
-            if (!$book) {
+            DB::beginTransaction();
+
+            // Kiểm tra xem sách có đang được tham chiếu không
+            if ($book->orderItems()->exists() || 
+                $book->cartItems()->exists()) {
                 return response()->json([
-                    'status' => 404,
-                    'error' => 'Book not found in database'
-                ], 404);
+                    'status' => 400,
+                    'error' => 'Không thể xóa sách vì đang được sử dụng trong đơn hàng hoặc giỏ hàng'
+                ], 400);
             }
-            
-            // Xóa các liên kết trước khi xóa sách
+
+            // Xóa các quan hệ
             $book->authors()->detach();
             $book->categories()->detach();
+
+            // Xóa sách
             $book->delete();
-            
-            // Xóa cache liên quan khi xóa sách
+
+            // Xóa cache
             Cache::forget("books:detail:{$id}");
+            Cache::forget("books:detail:{$book->gutendex_id}");
             $this->clearListCaches();
-            
+
+            DB::commit();
+
             return response()->json([
                 'status' => 200,
-                'message' => 'Book deleted successfully'
+                'message' => 'Xóa sách thành công'
             ]);
+
         } catch (\Exception $e) {
+            DB::rollBack();
             return response()->json([
                 'status' => 500,
-                'error' => 'Failed to delete book: ' . $e->getMessage()
+                'error' => 'Có lỗi xảy ra khi xóa sách: ' . $e->getMessage()
             ], 500);
         }
     }
@@ -609,13 +628,63 @@ class GutendexController extends Controller
     }
 
     /**
-     * Import tất cả sách từ Gutendex API (chỉ dành cho import)
-     * Chỉ admin mới có quyền sử dụng API này
+     * Kiểm tra xem người dùng hiện tại có quyền cụ thể không
+     * 
+     * @param string $permission Quyền cần kiểm tra
+     * @return bool
+     */
+    protected function userHasPermission(string $permission): bool
+    {
+        // Lấy RedisPermissionService
+        $permissionService = app(\App\Services\RedisPermissionService::class);
+        
+        // Không có user => không có quyền
+        if (!auth()->user()) {
+            return false;
+        }
+        
+        // Kiểm tra quyền qua roles
+        $user = auth()->user();
+        $roleIds = $user->roles()->pluck('id')->toArray();
+        
+        foreach ($roleIds as $roleId) {
+            if ($permissionService->hasPermission((string) $roleId, $permission)) {
+                \Illuminate\Support\Facades\Log::debug('User has permission', [
+                    'user_id' => auth()->id(),
+                    'role_id' => $roleId,
+                    'permission' => $permission
+                ]);
+                return true;
+            }
+        }
+        
+        \Illuminate\Support\Facades\Log::debug('User does not have permission', [
+            'user_id' => auth()->id(),
+            'roles' => $roleIds,
+            'permission' => $permission
+        ]);
+        
+        return false;
+    }
+
+    /**
+     * Import all books from Gutendex API (chỉ dành cho admin)
      */
     public function importAllBooks(Request $request)
     {
-        // Chỉ cho phép admin import tất cả sách
-        if (!auth()->user()->hasRole('admin')) {
+        // Chỉ cho phép user đã xác thực
+        if (!auth()->user()) {
+            return response()->json([
+                'message' => 'Unauthorized. Please login to use this feature.',
+            ], 403);
+        }
+
+        // Kiểm tra quyền system:import
+        if (!$this->userHasPermission('system:import')) {
+            \Illuminate\Support\Facades\Log::warning('User attempted to access import all books without permission', [
+                'user_id' => auth()->id()
+            ]);
+            
             return response()->json([
                 'message' => 'Unauthorized. Only admin can import all books.',
             ], 403);
@@ -636,22 +705,24 @@ class GutendexController extends Controller
 
         // Import books thông qua queue job
         try {
-            ImportGutendexBooks::dispatch(
-                $startPage,
-                $maxPages,
-                $batchSize
-            );
-
-            $this->importLogService->log(
-                'import_all',
-                'queued',
-                'Import all books job queued successfully',
-                [
+            // Lưu log trực tiếp vào database thay vì Redis
+            \App\Models\ImportLog::create([
+                'type' => 'gutendex_import',
+                'status' => 'queued',
+                'message' => 'Import all books job queued successfully',
+                'metadata' => [
                     'start_page' => $startPage,
                     'max_pages' => $maxPages,
                     'batch_size' => $batchSize,
                     'user_id' => auth()->id()
                 ]
+            ]);
+            
+            // Dispatch job
+            ImportGutendexBooks::dispatch(
+                $startPage,
+                $maxPages,
+                $batchSize
             );
 
             return response()->json([
@@ -668,19 +739,19 @@ class GutendexController extends Controller
                 'trace' => $e->getTraceAsString()
             ]);
 
-            $this->importLogService->log(
-                'import_all',
-                'error',
-                $e->getMessage(),
-                [
-                    'exception' => $e->getMessage(),
-                    'trace' => $e->getTraceAsString(),
+            // Lưu log lỗi vào database
+            \App\Models\ImportLog::create([
+                'type' => 'gutendex_import',
+                'status' => 'error',
+                'message' => 'Failed to dispatch import job: ' . $e->getMessage(),
+                'metadata' => [
                     'start_page' => $startPage,
                     'max_pages' => $maxPages,
                     'batch_size' => $batchSize,
-                    'user_id' => auth()->id()
+                    'user_id' => auth()->id(),
+                    'error' => $e->getMessage()
                 ]
-            );
+            ]);
 
             return response()->json([
                 'message' => 'Failed to queue import job',
@@ -698,6 +769,13 @@ class GutendexController extends Controller
         if (!auth()->user()) {
             return response()->json([
                 'message' => 'Unauthorized. Please login to use this feature.',
+            ], 403);
+        }
+
+        // Kiểm tra quyền system:import
+        if (!$this->userHasPermission('system:import')) {
+            return response()->json([
+                'message' => 'Unauthorized. You do not have permission to test import books.',
             ], 403);
         }
 
@@ -747,6 +825,13 @@ class GutendexController extends Controller
             ], 403);
         }
         
+        // Kiểm tra quyền system:import
+        if (!$this->userHasPermission('system:import')) {
+            return response()->json([
+                'message' => 'Unauthorized. You do not have permission to directly import books.',
+            ], 403);
+        }
+        
         // Sử dụng book ID cụ thể nếu được cung cấp, hoặc mặc định là 1
         $bookId = $request->input('book_id', 1);
         
@@ -764,8 +849,10 @@ class GutendexController extends Controller
             // Lưu log về việc import sách
             $importLog = \App\Models\ImportLog::create([
                 'type' => 'gutendex_direct_import',
+                'status' => 'success',
+                'message' => 'Book imported successfully',
                 'user_id' => auth()->id(),
-                'data' => [
+                'metadata' => [
                     'processed' => 1,
                     'success' => 1,
                     'failed' => 0,
@@ -803,8 +890,10 @@ class GutendexController extends Controller
             // Lưu log thất bại
             \App\Models\ImportLog::create([
                 'type' => 'gutendex_direct_import_failed',
+                'status' => 'error',
+                'message' => 'Direct import failed: ' . $e->getMessage(),
                 'user_id' => auth()->id(),
-                'data' => [
+                'metadata' => [
                     'processed' => 1,
                     'success' => 0,
                     'failed' => 1,

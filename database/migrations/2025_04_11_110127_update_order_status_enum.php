@@ -2,9 +2,6 @@
 
 use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\DB as FacadesDB;
-use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration {
     /**
@@ -32,6 +29,9 @@ return new class extends Migration {
     )");
     }
 
+    /**
+     * Reverse the migrations.
+     */
     public function down()
     {
         DB::statement("ALTER TABLE orders MODIFY status ENUM(

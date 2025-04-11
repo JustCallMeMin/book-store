@@ -37,6 +37,9 @@ const {
     ADD_USER_REQUEST,
     ADD_USER_SUCCESS,
     ADD_USER_FAILURE,
+    GET_PERMISSIONS_FAILURE,
+    GET_PERMISSIONS_REQUEST,
+    GET_PERMISSIONS_SUCCESS,
 } = require("./userTypes");
 
 const BASE_URL = process.env.REACT_APP_API_BASE_URL;
@@ -198,6 +201,19 @@ export const fetchUser = () => async (dispatch) => {
     const apiUrl = BASE_URL + `user`;
     try {
         const res = await customAxios.get(apiUrl, { withCredentials: true });
+        if (res.status === 200) {
+            const userProfile = await customAxios.get(BASE_URL + `profile`, {
+                withCredentials: true,
+            });
+            console.log("profile: ", userProfile);
+            if (userProfile.status === 200) {
+                console.log(userProfile.data.user);
+                sessionStorage.setItem(
+                    "user",
+                    JSON.stringify(userProfile.data.user)
+                );
+            }
+        }
         dispatch(fetchUserSuccess(res.data));
     } catch (e) {
         handleApiError(dispatch, fetchUserFailure, e);
@@ -258,6 +274,7 @@ export const logoutUser = () => async (dispatch) => {
         const res = await customAxios.post(apiUrl, { withCredentials: true });
         if (res.status === 200) {
             localStorage.removeItem("access_token");
+            sessionStorage.removeItem("user");
             dispatch(logoutUserSuccess());
         }
     } catch (e) {
@@ -362,5 +379,48 @@ export const addUser = (user) => async (dispatch) => {
         }
     } catch (e) {
         handleApiError(dispatch, addUserFailure, e);
+    }
+};
+
+export const getPermissionsFromApi = async (userRoleIds = []) => {
+    try {
+        const roleMap = {
+            Admin: 1,
+            User: 2,
+        };
+
+        // Chuyển role name (Admin, User) thành id (1, 2)
+        const mappedRoleIds = userRoleIds
+            .map((roleName) => roleMap[roleName])
+            .filter((id) => id !== undefined); // loại bỏ các role không hợp lệ
+
+        const res = await customAxios.get(BASE_URL + "permissions", {
+            withCredentials: true,
+        });
+
+        const data = res.data;
+
+        // Kiểm tra data trả về
+        if (!data.success || !data.data) return [];
+
+        const mergedPermissions = new Set();
+
+        mappedRoleIds.forEach((roleId) => {
+            const roleData = data.data[roleId];
+            if (roleData && Array.isArray(roleData.permissions)) {
+                roleData.permissions.forEach((perm) =>
+                    mergedPermissions.add(perm)
+                );
+            }
+        });
+
+        sessionStorage.setItem(
+            "permissions",
+            JSON.stringify(Array.from(mergedPermissions))
+        );
+        return Array.from(mergedPermissions);
+    } catch (err) {
+        console.error("Permission load error:", err.message);
+        return [];
     }
 };

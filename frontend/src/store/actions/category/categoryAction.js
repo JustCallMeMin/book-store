@@ -16,7 +16,7 @@ const handleApiError = (dispatch, action, error) => {
     }
 };
 
-const fethchCategoriesRequest = () => ({
+const fetchCategoriesRequest = () => ({
     type: FETCH_CATEGORIES_REQUEST,
 });
 const fetchCategoriesSuccess = (categories) => ({
@@ -29,7 +29,7 @@ const fetchCategoriesFailure = (error) => ({
 });
 export const fetchCategories = () => {
     return async (dispatch) => {
-        dispatch(fethchCategoriesRequest());
+        dispatch(fetchCategoriesRequest());
         try {
             const response = await customAxios.get(
                 `${BASE_URL}gutendex/categories`

@@ -221,14 +221,6 @@ class RedisCartService implements CartService
                 'recipient_phone' => $orderData['recipient_phone'],
                 'recipient_email' => $orderData['recipient_email'] ?? Auth::user()->email,
                 'total_amount' => $cartData['total_amount'],
-<<<<<<< HEAD
-                'discount_amount' => $cartData['discount_amount'],
-                'final_amount' => $cartData['final_amount'],
-                'payment_method' => $orderData['payment_method'],
-                'payment_status' => 'pending',
-                'status' => 'new',
-                'note' => $orderData['note'] ?? null
-=======
                 'tax_amount'=>0,
                 'shipping_fee'=>$orderData['shipping_fee'],
                 'discount_amount' => $cartData['discount_amount'],
@@ -241,7 +233,6 @@ class RedisCartService implements CartService
                 'payment_date' => null,
                 'shipping_date' => null,
                 'delivery_date'=>null
->>>>>>> parent of ba7182a (Revert "loi_thanh_toan")
             ]);
 
             $order->save();

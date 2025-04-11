@@ -125,6 +125,8 @@ Route::middleware('auth:api')->group(function () {
         Route::post('/momo-ipn',[OrderController::class,'momoIpn'])->withoutMiddleware([
             'auth:sanctum', 'auth:api', 'throttle', 'verified' // bỏ middleware nào đang chặn
         ]);
+        Route::post('/add-order-ship',[OrderController::class,'orderShip']);
+        Route::post('/detail-order-ship',[OrderController::class,'getOrderShipDetail']);
     });
 
 });

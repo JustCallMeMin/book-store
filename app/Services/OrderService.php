@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Order;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Redis;
 use App\Models\Book;
 use Illuminate\Support\Collection;
@@ -10,7 +11,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Models\Cart;
 use App\Models\OrderItem;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Js;
@@ -201,16 +204,197 @@ class OrderService
      * update đã thanh toán
      */
     /**
- * Cập nhật trạng thái đã thanh toán
- */
-public function updateStatusPaid(string $orderCode)
-{
-    return Order::where('order_code', $orderCode)
-                ->update([
-                    'status' => 'paid',
-                    'payment_status' => 'paid'
-                ]);
-}
+     * Cập nhật trạng thái đã thanh toán
+     */
+    public function updateStatusPaid(string $orderCode)
+    {
+        return Order::where('order_code', $orderCode)
+            ->update([
+                'status' => 'paid',
+                'payment_status' => 'paid'
+            ]);
+    }
+    /**
+     * Tính chiều cao, chiều rộng, chiều dài, cân nặng
+     */
+    public function calculateDimensions($items): array
+    {
+        $quantity = collect($items)->sum('quantity') ?? 0;// Số lượng sản phẩm trong giỏ hàng
+
+        $bookIds = collect($items)->pluck('book_id')->unique();  // Lấy danh sách ID sách từ giỏ hàng
+        $books = Book::whereIn('id', $bookIds)->get(); // Lấy thông tin sách từ cơ sở dữ liệu
+        $totalPages = $books->sum('page_count'); // Tổng số trang của tất cả các sản phẩm trong giỏ hàng
+
+        // Tính toán kích thước và trọng lượng
+        $weight = 50 * $totalPages; // // Giả sử mỗi trang nặng 50 gram
+        $length = 30; // Chiều dài 30cm cho mỗi sản phẩm
+        $width = 25;  // Chiều rộng 25cm cho mỗi sản phẩm
+        $height = (int) ceil(0.01 * $totalPages + 0.1 * $quantity); // Chiều cao 0.01cm cho mỗi trang và 0.05cm cho mỗi tờ bìa mỗi sản phẩm
+
+        return compact('weight', 'height', 'length', 'width');
+    }
+    /**
+     * Tạo đơn giao hàng
+     */
+    public function createOrderShip($order_code)
+    {
+        try {
+            $order = Order::where('order_code', $order_code)->first();
+            $items = OrderItem::where('order_id', $order->id)
+                ->select('book_id', 'quantity')
+                ->get();
+            $results = $this->calculateDimensions($items);
+            $weight = $results['weight'];
+            $height = $results['height'];
+            $width = $results['width'];
+            $length = $results['length'];
+
+            $insurance_value = $order->total_amount;
+
+            $fullAddress = $order->recipient_address;
+
+            // Tách chuỗi theo dấu phẩy và loại bỏ khoảng trắng thừa
+            $parts = array_map('trim', explode(',', $fullAddress));
+
+            // Gán vào các biến tương ứng
+            // $address = $parts[0] ?? '';
+            $ward = $parts[1] ?? '';
+            $district = $parts[2] ?? '';
+            $province = $parts[3] ?? '';
+
+            $to_name = $order->recipient_name;
+            $to_phone = $order->recipient_phone;
+
+            // Lấy danh sách ID sách
+            $bookIds = $items->pluck('book_id');
+
+            // Truy vấn tên sách theo ID
+            $books = Book::whereIn('id', $bookIds)->pluck('title', 'id'); // key là book_id, value là title
+
+            // Tạo nội dung đơn hàng
+            $content = $items->map(function ($item) use ($books) {
+                $title = $books[$item->book_id] ?? 'Không rõ sách';
+                return "{$title} (SL: {$item->quantity})";
+            })->implode("\n");
+
+            $url = 'https://dev-online-gateway.ghn.vn/shiip/public-api/v2/shipping-order/create';
+            $headers = [
+                "Content-Type: application/json",
+                "Token: " . env('GHN_API_TOKEN'),
+                "ShopId: " . env('GHN_SHOP_ID'),
+            ];
+
+            $data = [
+                'to_name' => $to_name,
+                'to_phone' => $to_phone,
+                'to_address' => $fullAddress,
+                'to_ward_name' => $ward,
+                'to_district_name' => $district,
+                'to_province_name' => $province,
+                'cod_amount' => 0,
+                'content' => $content,
+                'weight' => $weight,
+                'length' => $length,
+                'height' => $height,
+                'width' => $width,
+                'service_type_id' => 2,
+                'insurance_value' => (int) $insurance_value,
+                'payment_type_id' => 1,
+                'required_note' => 'KHONGCHOXEMHANG'
+            ];
+            Log::info('GHN Request Data', $data);
+            $options = [
+                'http' => [
+                    'method' => 'GET',
+                    'header' => implode("\r\n", $headers),
+                    'content' => json_encode($data),
+                ]
+            ];
+
+            $context = stream_context_create($options);
+            $response = file_get_contents($url, false, $context);
+            Log::info('GHN Response', ['response' => $response]);
+            if ($response['code'] == 200) {
+                $order->ship_code = $response['data']['order_code'];
+                $order->shipping_method = "Car";
+                $order->save();
+            }
+            $data = json_decode($response, true);
+
+            return collect($data)->toArray();
+        } catch (\Exception $e) {
+            Log::error('Error creating order ship', ['error' => $e->getMessage()]);
+            return [];
+        }
+    }
+
+    /**
+     * Lấy chi tiết đơn ship
+     */
+    public function getOrderDetail(string $orderCode): ?array
+    {
+        $url = 'https://dev-online-gateway.ghn.vn/shiip/public-api/v2/shipping-order/detail';
+        $order = Order::where('order_code', $orderCode)->first();
+        Log::info('Order: ' . $order->order_code . ' order_ship: ' . $order->ship_code);
+        if (!$order) {
+            return null;
+        }
+        $headers = [
+            "Content-Type: application/json",
+            "Token: " . env('GHN_API_TOKEN'),
+        ];
+        $data = ["order_code" => $order->ship_code];
+        $options = [
+            'http' => [
+                'method' => 'POST',
+                'header' => implode("\r\n", $headers),
+                'content' => json_encode($data),
+            ]
+        ];
+
+        $context = stream_context_create($options);
+        $response = file_get_contents($url, false, $context);
 
 
+
+        $data = json_decode($response, true); // Chuyển JSON string thành mảng
+
+        if (isset($data['code']) && $data['code'] == 200) {
+            return collect($data)->toArray(); // Trả về chi tiết đơn hàng
+        }
+
+        return null;
+    }
+
+    /**
+     * Cập nhật trạng thái vận chuyển
+     */
+    public function updateStatus($orderCode, $logs): ?JsonResponse
+    {
+        $order = Order::where('order_code', $orderCode)->first();
+        if (!$order) {
+            return null;
+        }
+        $latestLog = collect($logs)
+            ->sortByDesc('updated_date')
+            ->first();
+
+        //'picking','picked','storing','transporting','sorting','delivering','delivered','completed','cancelled','refunded','delivery_fail','returning','returned'
+        $status =['picking','picked','storing','transporting','sorting','delivering','delivered','completed','cancelled','refunded','delivery_fail','returning','returned'];
+        if(in_array($latestLog['status'],$status)){
+            $order->status = $latestLog['status'];
+            if ($order->status === 'picked') {
+                $carbon = Carbon::parse($latestLog['updated_date'])->setTimezone('Asia/Ho_Chi_Minh');
+                $order->shipping_date = $carbon;
+            } elseif ($order->status === 'delivered') {
+                $carbon = Carbon::parse($latestLog['updated_date'])->setTimezone('Asia/Ho_Chi_Minh');
+                $order->delivery_date = $carbon;
+            }
+            $order->save();
+            return response()->json([
+                'message'=>"Cập nhật trạng thái thành công"
+            ]);
+        }
+        return null;
+    }
 }

@@ -15,6 +15,9 @@ import MainLayout from "./admin/components/Layout";
 import Dashboard from "./admin/pages/Dashboard";
 import CategoryManagement from "./admin/pages/CategoryManagement";
 import AuthorManagement from "./admin/pages/AuthorManagement";
+import PublisherManagement from "./admin/pages/PublisherManagement";
+import AdminProfile from "./admin/pages/AdminProfile";
+import BookManagement from "./admin/pages/BookManagement";
 const user = JSON.parse(sessionStorage.getItem("user") || "{}");
 const accessAdminRoles = ["Admin"];
 function App() {
@@ -56,6 +59,12 @@ function App() {
                             element={<CategoryManagement />}
                         />
                         <Route path="authors" element={<AuthorManagement />} />
+                        <Route
+                            path="publishers"
+                            element={<PublisherManagement />}
+                        />
+                        <Route path="books" element={<BookManagement />} />
+                        <Route path="profile" element={<AdminProfile />} />
                     </Route>
                 </Routes>
             </Provider>

@@ -11,7 +11,11 @@ import {
 import { FaUser, FaEnvelope, FaPhone, FaLock } from "react-icons/fa";
 import { connect } from "react-redux";
 import "./ProfilePage.css";
-import { changePassword, updateUser } from "src/store/actions/user/userActions";
+import {
+    changePassword,
+    fetchUser,
+    updateUser,
+} from "src/store/actions/user/userActions";
 
 const initialErrors = {
     currentPassword: "",
@@ -29,6 +33,7 @@ const ProfilePage = ({
     changePasswordSuccess,
     changePasswordError,
     updateUser,
+    fetchUser,
 }) => {
     const [profileData, setProfileData] = useState({
         firstName: "",
@@ -52,6 +57,9 @@ const ProfilePage = ({
                 email: user.email || "",
                 phone: user.phone || "",
             });
+        } else {
+            console.error("User data not found");
+            fetchUser();
         }
     }, [user]);
 
@@ -334,6 +342,7 @@ const mapStateToProps = (state) => ({
 const mapDispatchToProps = (dispatch) => ({
     updateUser: (userData) => dispatch(updateUser(userData)),
     changePassword: (passwordData) => dispatch(changePassword(passwordData)),
+    fetchUser: () => dispatch(fetchUser()),
 });
 
 export default connect(mapStateToProps, mapDispatchToProps)(ProfilePage);

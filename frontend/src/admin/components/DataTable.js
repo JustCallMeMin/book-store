@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
     Table,
     Button,
@@ -10,14 +10,11 @@ import {
     Space,
     Checkbox,
 } from "antd";
-import {
-    PlusOutlined,
-    EditOutlined,
-    DeleteOutlined,
-    SearchOutlined,
-} from "@ant-design/icons";
+import { PlusOutlined, SearchOutlined } from "@ant-design/icons";
 import styled from "styled-components";
+import Highlighter from "react-highlight-words";
 import colors from "../constants/colors";
+import dayjs from "dayjs";
 
 const { Option } = Select;
 
@@ -45,8 +42,10 @@ const DataTable = ({
     const [modalLoading, setModalLoading] = useState(false);
     const [form] = Form.useForm();
     const [searchText, setSearchText] = useState("");
+    const [searchedColumn, setSearchedColumn] = useState("");
     const [filteredData, setFilteredData] = useState(data);
     const [pagination, setPagination] = useState({ current: 1, pageSize: 5 });
+    const searchInput = useRef(null);
 
     const hasAdd = typeof onAdd === "function";
     const hasUpdate = typeof onUpdate === "function";
@@ -56,14 +55,14 @@ const DataTable = ({
         setFilteredData(data);
     }, [data]);
 
-    const handleSearch = (value) => {
+    const handleSearchAll = (value) => {
         setSearchText(value);
+        setSearchedColumn("");
         const filtered = data.filter((item) =>
             Object.values(item).some(
                 (val) =>
                     val &&
-                    typeof val === "string" &&
-                    val.toLowerCase().includes(value.toLowerCase())
+                    val.toString().toLowerCase().includes(value.toLowerCase())
             )
         );
         setFilteredData(filtered);
@@ -86,15 +85,9 @@ const DataTable = ({
             const values = await form.validateFields();
 
             if (editingRecord && hasUpdate) {
-                const updatedValues = {
-                    ...values,
-                    _id: editingRecord._id,
-                };
-                await onUpdate(updatedValues);
-                message.success("Cập nhật thành công!");
+                await onUpdate({ ...values, id: editingRecord.id });
             } else if (!editingRecord && hasAdd) {
                 await onAdd(values);
-                message.success("Thêm mới thành công!");
             }
 
             setIsModalOpen(false);
@@ -114,9 +107,6 @@ const DataTable = ({
     const handleDeleteConfirm = () => {
         setModalLoading(true);
         onDelete(deleteKey)
-            .then(() => {
-                message.success("Xóa thành công!");
-            })
             .catch((error) => {
                 message.error(error.message || "Đã có lỗi xảy ra!");
             })
@@ -125,6 +115,108 @@ const DataTable = ({
                 setIsDeleteModalOpen(false);
                 setDeleteKey(null);
             });
+    };
+
+    const getColumnSearchProps = (dataIndex) => ({
+        filterDropdown: ({
+            setSelectedKeys,
+            selectedKeys,
+            confirm,
+            clearFilters,
+        }) => (
+            <div style={{ padding: 8 }}>
+                <Input
+                    ref={searchInput}
+                    placeholder={`Tìm ${dataIndex}`}
+                    value={selectedKeys[0]}
+                    onChange={(e) =>
+                        setSelectedKeys(e.target.value ? [e.target.value] : [])
+                    }
+                    onPressEnter={() =>
+                        handleColumnSearch(selectedKeys, confirm, dataIndex)
+                    }
+                    style={{ marginBottom: 8, display: "block" }}
+                />
+                <Space>
+                    <Button
+                        type="primary"
+                        onClick={() =>
+                            handleColumnSearch(selectedKeys, confirm, dataIndex)
+                        }
+                        icon={<SearchOutlined />}
+                        size="small"
+                        style={{ width: 90 }}
+                    >
+                        Tìm
+                    </Button>
+                    <Button
+                        onClick={() =>
+                            handleColumnReset(clearFilters, dataIndex)
+                        }
+                        size="small"
+                        style={{ width: 90 }}
+                    >
+                        Xóa
+                    </Button>
+                </Space>
+            </div>
+        ),
+        filterIcon: (filtered) => (
+            <SearchOutlined
+                style={{ color: filtered ? "#1890ff" : undefined }}
+            />
+        ),
+        onFilter: (value, record) => {
+            const val = record[dataIndex];
+            return val
+                ? val.toString().toLowerCase().includes(value.toLowerCase())
+                : false;
+        },
+        filterDropdownProps: {
+            onOpenChange: (visible) => {
+                if (visible) {
+                    setTimeout(() => searchInput.current?.select(), 100);
+                }
+            },
+        },
+        render: (text) =>
+            searchedColumn === dataIndex ? (
+                <Highlighter
+                    highlightStyle={{ backgroundColor: "#ffc069", padding: 0 }}
+                    searchWords={[searchText]}
+                    autoEscape
+                    textToHighlight={text ? text.toString() : ""}
+                />
+            ) : (
+                text
+            ),
+    });
+
+    const handleColumnSearch = (selectedKeys, confirm, dataIndex) => {
+        confirm();
+        const searchValue = selectedKeys[0] || "";
+        setSearchText(searchValue);
+        setSearchedColumn(dataIndex);
+
+        const filtered = data.filter((item) => {
+            const val = item[dataIndex];
+            return val
+                ? val
+                      .toString()
+                      .toLowerCase()
+                      .includes(searchValue.toLowerCase())
+                : false;
+        });
+        setFilteredData(filtered);
+        setPagination({ ...pagination, current: 1 });
+    };
+
+    const handleColumnReset = (clearFilters, dataIndex) => {
+        clearFilters();
+        setSearchText("");
+        setSearchedColumn("");
+        setFilteredData(data);
+        setPagination({ ...pagination, current: 1 });
     };
 
     const actionColumn =
@@ -161,10 +253,40 @@ const DataTable = ({
               }
             : null;
 
-    const enhancedColumns = columns.map((col) => ({
-        ...col,
-        width: col.width || 150,
-    }));
+    const enhancedColumns = columns.map((col) => {
+        const { dataIndex } = col;
+        const hasCustomSorter = !!col.sorter;
+        return {
+            ...col,
+            width: col.width || 150,
+            sorter: hasCustomSorter
+                ? col.sorter
+                : (a, b) => {
+                      const aVal = a[dataIndex];
+                      const bVal = b[dataIndex];
+                      if (
+                          typeof aVal === "string" &&
+                          typeof bVal === "string"
+                      ) {
+                          return aVal.localeCompare(bVal);
+                      }
+                      if (
+                          typeof aVal === "number" &&
+                          typeof bVal === "number"
+                      ) {
+                          return aVal - bVal;
+                      }
+                      return 0;
+                  },
+            sortDirections: ["ascend", "descend"],
+            ...(dataIndex ? getColumnSearchProps(dataIndex) : {}),
+            render:
+                col.type === "date"
+                    ? (value) =>
+                          value ? dayjs(value).format("HH:mm DD/MM/YYYY") : ""
+                    : col.render,
+        };
+    });
 
     return (
         <StyledCard>
@@ -176,11 +298,11 @@ const DataTable = ({
                 }}
             >
                 <Input
-                    placeholder="Tìm kiếm..."
+                    placeholder="Tìm kiếm toàn bộ..."
                     prefix={<SearchOutlined />}
                     value={searchText}
-                    onChange={(e) => handleSearch(e.target.value)}
-                    style={{ width: 200 }}
+                    onChange={(e) => handleSearchAll(e.target.value)}
+                    style={{ width: 250 }}
                 />
                 {hasAdd && (
                     <Button
@@ -207,11 +329,7 @@ const DataTable = ({
                     ...pagination,
                     total: filteredData.length,
                     onChange: (page, pageSize) =>
-                        setPagination({
-                            ...pagination,
-                            current: page,
-                            pageSize,
-                        }),
+                        setPagination({ current: page, pageSize }),
                 }}
                 scroll={{ x: "max-content" }}
             />
@@ -230,7 +348,7 @@ const DataTable = ({
                 confirmLoading={modalLoading}
             >
                 <Form form={form} layout="vertical">
-                    {formFields && formFields.length > 0 ? (
+                    {formFields.length > 0 ? (
                         formFields.map((field) => (
                             <Form.Item
                                 key={field.name}
@@ -242,15 +360,14 @@ const DataTable = ({
                                     <Checkbox.Group options={field.options} />
                                 ) : field.type === "select" ? (
                                     <Select placeholder={field.placeholder}>
-                                        {field.options &&
-                                            field.options.map((option) => (
-                                                <Option
-                                                    key={option.value}
-                                                    value={option.value}
-                                                >
-                                                    {option.label}
-                                                </Option>
-                                            ))}
+                                        {field.options?.map((option) => (
+                                            <Option
+                                                key={option.value}
+                                                value={option.value}
+                                            >
+                                                {option.label}
+                                            </Option>
+                                        ))}
                                     </Select>
                                 ) : (
                                     <Input

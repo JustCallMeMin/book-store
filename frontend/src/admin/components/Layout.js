@@ -2,11 +2,12 @@
 import React, { Component } from "react";
 import { Layout as AntLayout, Dropdown, message } from "antd";
 import {
-    CaretRightOutlined,
+    BankOutlined,
+    BookOutlined,
     DashboardOutlined,
     EditOutlined,
     FolderOutlined,
-    UserOutlined,
+    OrderedListOutlined,
 } from "@ant-design/icons";
 import { Link, Outlet } from "react-router-dom";
 import UserInfoCard from "./UserInfoCard";
@@ -100,6 +101,10 @@ class MainLayout extends Component {
         // Phân quyền cho từng trang
         const bookPerm = parsePermissionsForPage(permissions, "books");
         const categoryPerm = parsePermissionsForPage(permissions, "categories");
+        const publisherPerm = parsePermissionsForPage(
+            permissions,
+            "publishers"
+        );
 
         const roleMenuItems = userInfo.roles.map((role) => ({
             key: role,
@@ -152,10 +157,32 @@ class MainLayout extends Component {
                       },
                   ]
                 : []),
+            ...(publisherPerm.access
+                ? [
+                      {
+                          key: "4",
+                          icon: <BankOutlined />,
+                          label: (
+                              <Link to="/admin/publishers">
+                                  Quản lý nhà xuất bản
+                              </Link>
+                          ),
+                      },
+                  ]
+                : []),
+            ...(bookPerm.access
+                ? [
+                      {
+                          key: "5",
+                          icon: <BookOutlined />,
+                          label: <Link to="/admin/books">Quản lý sách</Link>,
+                      },
+                  ]
+                : []),
             {
-                key: "4",
-                icon: <UserOutlined />,
-                label: "Quản lý Academy",
+                key: "10",
+                icon: <OrderedListOutlined />,
+                label: "Quản lý đơn hàng",
                 children: [
                     // ...(classPerm.access
                     //     ? [

@@ -1,115 +1,104 @@
 const {
-    FETCH_BOOKS_FAILURE,
-    FETCH_BOOKS_REQUEST,
-    FETCH_BOOKS_SUCCESS,
-    FETCH_BOOK_REQUEST,
-    FETCH_BOOK_SUCCESS,
-    FETCH_BOOK_FAILURE,
-    UPDATE_BOOK_REQUEST,
-    UPDATE_BOOK_SUCCESS,
-    UPDATE_BOOK_FAILURE,
-    DELETE_BOOK_REQUEST,
-    DELETE_BOOK_SUCCESS,
-    DELETE_BOOK_FAILURE,
-    ADD_BOOK_REQUEST,
-    ADD_BOOK_SUCCESS,
-    ADD_BOOK_FAILURE,
-} = require("./../actions/book/bookTypes");
-
+    FETCH_PUBLISHERS_FAILURE,
+    FETCH_PUBLISHERS_REQUEST,
+    FETCH_PUBLISHERS_SUCCESS,
+    ADD_PUBLISHER_REQUEST,
+    ADD_PUBLISHER_SUCCESS,
+    ADD_PUBLISHER_FAILURE,
+    UPDATE_PUBLISHER_REQUEST,
+    UPDATE_PUBLISHER_SUCCESS,
+    UPDATE_PUBLISHER_FAILURE,
+    DELETE_PUBLISHER_REQUEST,
+    DELETE_PUBLISHER_SUCCESS,
+    DELETE_PUBLISHER_FAILURE,
+} = require("../actions/publisher/publisherTypes");
 const initialState = {
-    books: [],
+    publishers: [],
     loading: false,
     error: "",
     actionState: false,
 };
-function bookReducer(state = initialState, action) {
+function publisherReducer(state = initialState, action) {
     switch (action.type) {
-        case FETCH_BOOKS_REQUEST:
+        case FETCH_PUBLISHERS_REQUEST:
             return {
                 ...state,
                 loading: true,
             };
-        case FETCH_BOOKS_SUCCESS:
+        case FETCH_PUBLISHERS_SUCCESS:
             return {
                 loading: false,
-                books: action.payload,
+                publishers: action.payload,
                 error: "",
             };
-        case FETCH_BOOKS_FAILURE:
+        case FETCH_PUBLISHERS_FAILURE:
             return {
-                books: [],
+                publishers: [],
                 loading: false,
                 error: action.payload,
             };
-        case FETCH_BOOK_REQUEST:
+        case ADD_PUBLISHER_REQUEST:
             return {
                 ...state,
                 loading: true,
+                actionState: false,
+                error: "",
             };
-        case FETCH_BOOK_SUCCESS:
-            return {
-                book: action.payload,
-                loading: false,
-            };
-        case FETCH_BOOK_FAILURE:
-            return {
-                book: {},
-                loading: false,
-                error: action.payload,
-            };
-        case UPDATE_BOOK_REQUEST:
-            return {
-                ...state,
-                loading: true,
-            };
-        case UPDATE_BOOK_SUCCESS:
+        case ADD_PUBLISHER_SUCCESS:
             return {
                 ...state,
                 loading: false,
                 actionState: true,
             };
-        case UPDATE_BOOK_FAILURE:
+        case ADD_PUBLISHER_FAILURE:
             return {
                 ...state,
                 loading: false,
+                actionState: false,
                 error: action.payload,
             };
-        case DELETE_BOOK_REQUEST:
+        case UPDATE_PUBLISHER_REQUEST:
             return {
                 ...state,
                 loading: true,
+                actionState: false,
+                error: "",
             };
-        case DELETE_BOOK_SUCCESS:
+        case UPDATE_PUBLISHER_SUCCESS:
             return {
                 ...state,
                 loading: false,
                 actionState: true,
             };
-        case DELETE_BOOK_FAILURE:
+        case UPDATE_PUBLISHER_FAILURE:
             return {
                 ...state,
                 loading: false,
+                actionState: false,
                 error: action.payload,
             };
-        case ADD_BOOK_REQUEST:
+        case DELETE_PUBLISHER_REQUEST:
             return {
                 ...state,
                 loading: true,
+                actionState: false,
+                error: "",
             };
-        case ADD_BOOK_SUCCESS:
+        case DELETE_PUBLISHER_SUCCESS:
             return {
                 ...state,
                 loading: false,
                 actionState: true,
             };
-        case ADD_BOOK_FAILURE:
+        case DELETE_PUBLISHER_FAILURE:
             return {
                 ...state,
                 loading: false,
+                actionState: false,
                 error: action.payload,
             };
         default:
             return state;
     }
 }
-export default bookReducer;
+export default publisherReducer;

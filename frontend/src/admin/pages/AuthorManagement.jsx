@@ -56,6 +56,15 @@ class AuthorManagement extends Component {
     }
 
     componentDidUpdate(prevProps) {
+        const { error } = this.props;
+
+        if (prevProps.error !== error) {
+            if (error) {
+                message.error(
+                    `Có lỗi xảy ra khi tải dữ liệu tác giả: ${error}`
+                );
+            }
+        }
         if (
             prevProps.authors !== this.props.authors &&
             Array.isArray(this.props.authors?.data)
@@ -179,6 +188,7 @@ class AuthorManagement extends Component {
             return <Navigate to="/accessDenied" replace />;
         }
 
+        console.log("Authors data:", authors);
         const dataWithKey = Array.isArray(authors?.data)
             ? authors.data.map((item) => ({
                   ...item,
@@ -203,6 +213,7 @@ class AuthorManagement extends Component {
 const mapStateToProps = (state) => ({
     authors: state.authorReducer.authors,
     loading: state.authorReducer.loading,
+    error: state.authorReducer.error,
 });
 
 const mapDispatchToProps = {

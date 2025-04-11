@@ -299,39 +299,57 @@ class GutendexController extends Controller
     }
 
     /**
-     * Xóa sách khỏi database
+     * Xóa một cuốn sách khỏi database
      */
     public function destroy($id)
     {
+        $book = Book::where('gutendex_id', $id)
+                    ->orWhere('id', $id)
+                    ->first();
+
+        if (!$book) {
+            return response()->json([
+                'status' => 404,
+                'error' => 'Book not found in database'
+            ], 404);
+        }
+
         try {
-            $book = Book::where('gutendex_id', $id)
-                        ->orWhere('id', $id)
-                        ->first();
-            
-            if (!$book) {
+            DB::beginTransaction();
+
+            // Kiểm tra xem sách có đang được tham chiếu không
+            if ($book->orderItems()->exists() || 
+                $book->cartItems()->exists()) {
                 return response()->json([
-                    'status' => 404,
-                    'error' => 'Book not found in database'
-                ], 404);
+                    'status' => 400,
+                    'error' => 'Không thể xóa sách vì đang được sử dụng trong đơn hàng hoặc giỏ hàng'
+                ], 400);
             }
-            
-            // Xóa các liên kết trước khi xóa sách
+
+            // Xóa các quan hệ
             $book->authors()->detach();
             $book->categories()->detach();
+
+            // Xóa sách
             $book->delete();
-            
-            // Xóa cache liên quan khi xóa sách
+
+            // Xóa cache
             Cache::forget("books:detail:{$id}");
+            Cache::forget("books:detail:{$book->gutendex_id}");
             $this->clearListCaches();
-            
+
+            DB::commit();
+
             return response()->json([
                 'status' => 200,
-                'message' => 'Book deleted successfully'
+                'message' => 'Xóa sách thành công'
             ]);
+
         } catch (\Exception $e) {
+            DB::rollBack();
             return response()->json([
                 'status' => 500,
-                'error' => 'Failed to delete book: ' . $e->getMessage()
+                'error' => 'Có lỗi xảy ra khi xóa sách: ' . $e->getMessage()
             ], 500);
         }
     }

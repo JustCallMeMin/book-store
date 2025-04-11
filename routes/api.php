@@ -6,6 +6,7 @@ use App\Http\Controllers\UserActivityController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\GoogleController;
+use App\Http\Controllers\UserController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\PublisherController;
@@ -75,6 +76,11 @@ Route::middleware('auth:api')->group(function () {
             Route::delete('/{id}', [PermissionController::class, 'destroy'])->middleware('requires.permission:permissions:manage');
             Route::post('/assign', [PermissionController::class, 'assignToRole'])->middleware('requires.permission:permissions:manage');
             Route::get('/roles/{roleId}', [PermissionController::class, 'getRolePermissions'])->middleware('requires.permission:permissions:manage');
+        });
+
+        // Quản lý người dùng
+        Route::prefix('users')->group(function () {
+            Route::get('/', [UserController::class, 'index'])->middleware('requires.permission:users:read');
         });
     });
 

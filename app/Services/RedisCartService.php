@@ -225,7 +225,7 @@ class RedisCartService implements CartService
                 'final_amount' => $cartData['final_amount'],
                 'payment_method' => $orderData['payment_method'],
                 'payment_status' => 'pending',
-                'status' => 'new',
+                'status' => 'pending',
                 'note' => $orderData['note'] ?? null
             ]);
 

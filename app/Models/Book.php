@@ -7,10 +7,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Book extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $fillable = [
         'gutendex_id',
@@ -104,14 +105,6 @@ class Book extends Model
     public function cartItems(): HasMany
     {
         return $this->hasMany(CartItem::class);
-    }
-
-    /**
-     * Lấy tất cả các chi tiết nhập có sách này
-     */
-    public function importItems(): HasMany
-    {
-        return $this->hasMany(ImportItem::class);
     }
 
     /**

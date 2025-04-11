@@ -29,7 +29,7 @@ class Order extends Model
         'final_amount',
         'payment_method',
         'payment_status',
-        'order_status',
+        'status',
         'notes',
         'ordered_at',
         'shipped_at',

@@ -12,19 +12,27 @@ class ImportLog extends Model
     use HasFactory, HasUuids;
 
     /**
-     * Các thuộc tính có thể gán hàng loạt
+     * The attributes that are mass assignable.
+     *
+     * @var array<string>
      */
     protected $fillable = [
         'type',
-        'user_id',
-        'data',
+        'status',
+        'message',
+        'metadata',
+        'user_id'
     ];
 
     /**
-     * Các thuộc tính cần cast
+     * The attributes that should be cast.
+     *
+     * @var array<string, string>
      */
     protected $casts = [
-        'data' => 'array',
+        'metadata' => 'array',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 
     /**

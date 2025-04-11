@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
 use App\Services\RedisImportLogService;
 use App\Services\RedisActivityService;
+use App\Services\RedisPermissionService;
 
 class GutendexController extends Controller
 {
@@ -64,11 +65,12 @@ class GutendexController extends Controller
         
         // Kiểm tra cache (10 phút)
         if (Cache::has($cacheKey)) {
-            return response()->json(Cache::get($cacheKey));
+            // Xoá cache nếu có thay đổi về xoá sách
+            Cache::forget($cacheKey);
         }
         
-        // Logic tìm kiếm và query hiện tại
-        $query = Book::with(['authors', 'categories', 'publisher']);
+        // Logic tìm kiếm và query hiện tại - đảm bảo chỉ lấy sách chưa bị xóa
+        $query = Book::with(['authors', 'categories', 'publisher']);  // SoftDeletes sẽ tự động loại bỏ các sách đã xóa
         
         // Filter theo search term
         if ($search) {
@@ -226,15 +228,23 @@ class GutendexController extends Controller
             return response()->json(Cache::get($cacheKey));
         }
         
-        $book = Book::with(['authors', 'categories', 'publisher'])
-                    ->where('gutendex_id', $id)
-                    ->orWhere('id', $id)
-                    ->first();
+        // Tìm sách bao gồm cả sách đã xóa mềm
+        $book = Book::withTrashed()
+                    ->with(['authors', 'categories', 'publisher'])
+                    ->find($id);
         
         if (!$book) {
             return response()->json([
                 'status' => 404,
                 'error' => 'Book not found in database'
+            ], 404);
+        }
+
+        // Nếu sách đã bị xóa mềm, trả về 404
+        if ($book->trashed()) {
+            return response()->json([
+                'status' => 404,
+                'error' => 'Book has been deleted'
             ], 404);
         }
         
@@ -298,39 +308,55 @@ class GutendexController extends Controller
     }
 
     /**
-     * Xóa sách khỏi database
+     * Xóa một cuốn sách khỏi database (soft delete)
      */
     public function destroy($id)
     {
+        $book = Book::find($id);
+
+        if (!$book) {
+            return response()->json([
+                'status' => 404,
+                'error' => 'Book not found in database'
+            ], 404);
+        }
+
         try {
-            $book = Book::where('gutendex_id', $id)
-                        ->orWhere('id', $id)
-                        ->first();
-            
-            if (!$book) {
+            DB::beginTransaction();
+
+            // Kiểm tra xem sách có đang được tham chiếu không
+            if ($book->orderItems()->exists() || 
+                $book->cartItems()->exists()) {
                 return response()->json([
-                    'status' => 404,
-                    'error' => 'Book not found in database'
-                ], 404);
+                    'status' => 400,
+                    'error' => 'Không thể xóa sách vì đang được sử dụng trong đơn hàng hoặc giỏ hàng'
+                ], 400);
             }
-            
-            // Xóa các liên kết trước khi xóa sách
-            $book->authors()->detach();
-            $book->categories()->detach();
+
+            // Soft delete sách - không xóa các quan hệ để có thể khôi phục
             $book->delete();
             
-            // Xóa cache liên quan khi xóa sách
-            Cache::forget("books:detail:{$id}");
-            $this->clearListCaches();
-            
+            // Xóa cache an toàn 
+            try {
+                Cache::forget("books:detail:{$id}");
+                $this->clearListCaches();
+            } catch (\Exception $e) {
+                // Ghi log lỗi nhưng vẫn tiếp tục xử lý
+                \Illuminate\Support\Facades\Log::error('Error clearing cache: ' . $e->getMessage());
+            }
+
+            DB::commit();
+
             return response()->json([
                 'status' => 200,
-                'message' => 'Book deleted successfully'
+                'message' => 'Xóa sách thành công'
             ]);
+
         } catch (\Exception $e) {
+            DB::rollBack();
             return response()->json([
                 'status' => 500,
-                'error' => 'Failed to delete book: ' . $e->getMessage()
+                'error' => 'Có lỗi xảy ra khi xóa sách: ' . $e->getMessage()
             ], 500);
         }
     }
@@ -609,13 +635,63 @@ class GutendexController extends Controller
     }
 
     /**
-     * Import tất cả sách từ Gutendex API (chỉ dành cho import)
-     * Chỉ admin mới có quyền sử dụng API này
+     * Kiểm tra xem người dùng hiện tại có quyền cụ thể không
+     * 
+     * @param string $permission Quyền cần kiểm tra
+     * @return bool
+     */
+    protected function userHasPermission(string $permission): bool
+    {
+        // Lấy RedisPermissionService
+        $permissionService = app(\App\Services\RedisPermissionService::class);
+        
+        // Không có user => không có quyền
+        if (!auth()->user()) {
+            return false;
+        }
+        
+        // Kiểm tra quyền qua roles
+        $user = auth()->user();
+        $roleIds = $user->roles()->pluck('id')->toArray();
+        
+        foreach ($roleIds as $roleId) {
+            if ($permissionService->hasPermission((string) $roleId, $permission)) {
+                \Illuminate\Support\Facades\Log::debug('User has permission', [
+                    'user_id' => auth()->id(),
+                    'role_id' => $roleId,
+                    'permission' => $permission
+                ]);
+                return true;
+            }
+        }
+        
+        \Illuminate\Support\Facades\Log::debug('User does not have permission', [
+            'user_id' => auth()->id(),
+            'roles' => $roleIds,
+            'permission' => $permission
+        ]);
+        
+        return false;
+    }
+
+    /**
+     * Import all books from Gutendex API (chỉ dành cho admin)
      */
     public function importAllBooks(Request $request)
     {
-        // Chỉ cho phép admin import tất cả sách
-        if (!auth()->user()->hasRole('admin')) {
+        // Chỉ cho phép user đã xác thực
+        if (!auth()->user()) {
+            return response()->json([
+                'message' => 'Unauthorized. Please login to use this feature.',
+            ], 403);
+        }
+
+        // Kiểm tra quyền system:import
+        if (!$this->userHasPermission('system:import')) {
+            \Illuminate\Support\Facades\Log::warning('User attempted to access import all books without permission', [
+                'user_id' => auth()->id()
+            ]);
+            
             return response()->json([
                 'message' => 'Unauthorized. Only admin can import all books.',
             ], 403);
@@ -636,22 +712,24 @@ class GutendexController extends Controller
 
         // Import books thông qua queue job
         try {
-            ImportGutendexBooks::dispatch(
-                $startPage,
-                $maxPages,
-                $batchSize
-            );
-
-            $this->importLogService->log(
-                'import_all',
-                'queued',
-                'Import all books job queued successfully',
-                [
+            // Lưu log trực tiếp vào database thay vì Redis
+            \App\Models\ImportLog::create([
+                'type' => 'gutendex_import',
+                'status' => 'queued',
+                'message' => 'Import all books job queued successfully',
+                'metadata' => [
                     'start_page' => $startPage,
                     'max_pages' => $maxPages,
                     'batch_size' => $batchSize,
                     'user_id' => auth()->id()
                 ]
+            ]);
+            
+            // Dispatch job
+            ImportGutendexBooks::dispatch(
+                $startPage,
+                $maxPages,
+                $batchSize
             );
 
             return response()->json([
@@ -668,19 +746,19 @@ class GutendexController extends Controller
                 'trace' => $e->getTraceAsString()
             ]);
 
-            $this->importLogService->log(
-                'import_all',
-                'error',
-                $e->getMessage(),
-                [
-                    'exception' => $e->getMessage(),
-                    'trace' => $e->getTraceAsString(),
+            // Lưu log lỗi vào database
+            \App\Models\ImportLog::create([
+                'type' => 'gutendex_import',
+                'status' => 'error',
+                'message' => 'Failed to dispatch import job: ' . $e->getMessage(),
+                'metadata' => [
                     'start_page' => $startPage,
                     'max_pages' => $maxPages,
                     'batch_size' => $batchSize,
-                    'user_id' => auth()->id()
+                    'user_id' => auth()->id(),
+                    'error' => $e->getMessage()
                 ]
-            );
+            ]);
 
             return response()->json([
                 'message' => 'Failed to queue import job',
@@ -698,6 +776,13 @@ class GutendexController extends Controller
         if (!auth()->user()) {
             return response()->json([
                 'message' => 'Unauthorized. Please login to use this feature.',
+            ], 403);
+        }
+
+        // Kiểm tra quyền system:import
+        if (!$this->userHasPermission('system:import')) {
+            return response()->json([
+                'message' => 'Unauthorized. You do not have permission to test import books.',
             ], 403);
         }
 
@@ -747,6 +832,13 @@ class GutendexController extends Controller
             ], 403);
         }
         
+        // Kiểm tra quyền system:import
+        if (!$this->userHasPermission('system:import')) {
+            return response()->json([
+                'message' => 'Unauthorized. You do not have permission to directly import books.',
+            ], 403);
+        }
+        
         // Sử dụng book ID cụ thể nếu được cung cấp, hoặc mặc định là 1
         $bookId = $request->input('book_id', 1);
         
@@ -764,8 +856,10 @@ class GutendexController extends Controller
             // Lưu log về việc import sách
             $importLog = \App\Models\ImportLog::create([
                 'type' => 'gutendex_direct_import',
+                'status' => 'success',
+                'message' => 'Book imported successfully',
                 'user_id' => auth()->id(),
-                'data' => [
+                'metadata' => [
                     'processed' => 1,
                     'success' => 1,
                     'failed' => 0,
@@ -803,8 +897,10 @@ class GutendexController extends Controller
             // Lưu log thất bại
             \App\Models\ImportLog::create([
                 'type' => 'gutendex_direct_import_failed',
+                'status' => 'error',
+                'message' => 'Direct import failed: ' . $e->getMessage(),
                 'user_id' => auth()->id(),
-                'data' => [
+                'metadata' => [
                     'processed' => 1,
                     'success' => 0,
                     'failed' => 1,
@@ -836,44 +932,96 @@ class GutendexController extends Controller
     }
 
     /**
+     * Khôi phục một cuốn sách đã xóa mềm
+     */
+    public function restore($id)
+    {
+        $book = Book::withTrashed()->find($id);
+
+        if (!$book) {
+            return response()->json([
+                'status' => 404,
+                'error' => 'Book not found in database'
+            ], 404);
+        }
+
+        if (!$book->trashed()) {
+            return response()->json([
+                'status' => 400,
+                'error' => 'Sách này chưa bị xóa'
+            ], 400);
+        }
+
+        try {
+            DB::beginTransaction();
+
+            // Khôi phục sách
+            $book->restore();
+            
+            // Xóa cache an toàn 
+            try {
+                Cache::forget("books:detail:{$id}");
+                $this->clearListCaches();
+            } catch (\Exception $e) {
+                // Ghi log lỗi nhưng vẫn tiếp tục xử lý
+                \Illuminate\Support\Facades\Log::error('Error clearing cache: ' . $e->getMessage());
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'status' => 200,
+                'message' => 'Khôi phục sách thành công'
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'status' => 500,
+                'error' => 'Có lỗi xảy ra khi khôi phục sách: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Xóa cache danh sách
      */
     private function clearListCaches()
     {
-        if (config('cache.default') === 'redis' && Cache::getStore() instanceof \Illuminate\Cache\RedisStore) {
-            // Pattern matching với Redis
-            $redis = Cache::getRedis();
-            
-            // Xóa cache danh sách sách 
-            $booksListKeys = $redis->keys('books:list:*');
-            foreach ($booksListKeys as $key) {
-                Cache::forget($key);
+        try {
+            // File cache system không hỗ trợ tags, cần xử lý từng key
+            if (config('cache.default') === 'redis' && Cache::getStore() instanceof \Illuminate\Cache\RedisStore) {
+                // Pattern matching với Redis
+                $redis = Cache::getRedis();
+                
+                // Các pattern cache cần xóa
+                $patterns = [
+                    'books:list:*',      // Cache danh sách sách
+                    'books:detail:*',    // Cache chi tiết sách
+                    'authors:*',         // Cache tác giả và sách theo tác giả
+                    'categories:*',      // Cache thể loại và sách theo thể loại
+                    'suggestions:*',     // Cache gợi ý tìm kiếm
+                    'search:*'           // Cache kết quả tìm kiếm
+                ];
+                
+                foreach ($patterns as $pattern) {
+                    $keys = $redis->keys(config('database.redis.options.prefix', '') . $pattern);
+                    foreach ($keys as $key) {
+                        // Xóa prefix để lấy key thực
+                        $realKey = str_replace(config('database.redis.options.prefix', ''), '', $key);
+                        Cache::forget($realKey);
+                    }
+                }
+            } else {
+                // Fallback cho non-Redis cache
+                // Xóa các key cụ thể cho file cache
+                Cache::forget('categories:all');
+                Cache::forget('authors:all');
+                Cache::forget('books:list');
+                Cache::forget('books:search');
             }
-            
-            // Xóa cache danh sách tác giả và sách theo tác giả
-            Cache::forget('authors:all');
-            $authorBooksKeys = $redis->keys('authors:*:books:*');
-            foreach ($authorBooksKeys as $key) {
-                Cache::forget($key);
-            }
-            
-            // Xóa cache danh sách thể loại và sách theo thể loại
-            Cache::forget('categories:all');
-            $categoryBooksKeys = $redis->keys('categories:*:books:*');
-            foreach ($categoryBooksKeys as $key) {
-                Cache::forget($key);
-            }
-            
-            // Xóa cache gợi ý tìm kiếm
-            $suggestionKeys = $redis->keys('suggestions:*');
-            foreach ($suggestionKeys as $key) {
-                Cache::forget($key);
-            }
-        } else {
-            // Fallback cho non-Redis cache
-            Cache::forget('categories:all');
-            Cache::forget('authors:all');
-            // Không thể làm pattern matching với non-Redis stores
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Error clearing cache: ' . $e->getMessage());
         }
     }
 

@@ -93,6 +93,7 @@ Route::middleware('auth:api')->group(function () {
         Route::post('/books', [GutendexController::class, 'store'])->middleware('requires.permission:books:create');
         Route::delete('/books/{id}', [GutendexController::class, 'destroy'])->middleware('requires.permission:books:delete');
         Route::put('/books/{id}', [GutendexController::class, 'update'])->middleware('requires.permission:books:update');
+        Route::post('/books/{id}/restore', [GutendexController::class, 'restore'])->middleware('requires.permission:books:update');
         
         // Import routes requiring system:import permission
         Route::post('/bulk-import', [GutendexController::class, 'bulkImport'])->middleware('requires.permission:system:import');

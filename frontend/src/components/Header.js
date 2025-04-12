@@ -8,64 +8,45 @@ import {
     Badge,
     NavDropdown,
 } from "react-bootstrap";
-import { FaHeart, FaShoppingCart, FaUser, FaSearch } from "react-icons/fa";
+import { FaHeart, FaShoppingCart, FaSearch } from "react-icons/fa";
 import { Link } from "react-router-dom";
-import { getCartItems } from "../utils/cartUtils";
 import CartSidebar from "./CartSidebar";
 import "./Header.css";
 import AccountMenu from "./AccountMenu";
 import { connect } from "react-redux";
-import { m } from "framer-motion";
-
+import { getCartItems } from "./../store/actions/cart/cartAction";
 class Header extends Component {
     constructor(props) {
         super(props);
         this.state = {
             showCategories: false,
-            cartItemCount: 0,
             showCart: false,
-            cartItems: [],
         };
-    }
-
-    componentDidUpdate(prevProps) {
-        if (prevProps.user !== this.props.user) {
-            // Handle user state change if needed
-        }
     }
 
     componentDidMount() {
-        console.log("User state changed:", this.props.user);
-        const items = getCartItems();
-        this.setState({
-            cartItems: items,
-            cartItemCount: items.reduce(
-                (total, item) => total + item.quantity,
-                0
-            ),
-        });
-
-        this.handleCartUpdate = (e) => {
-            const updatedItems = e.detail.cartItems;
-            this.setState({
-                cartItems: updatedItems,
-                cartItemCount: updatedItems.reduce(
-                    (total, item) => total + item.quantity,
-                    0
-                ),
-            });
-        };
-
-        window.addEventListener("cartUpdated", this.handleCartUpdate);
+        this.props.getCartItems();
     }
 
-    componentWillUnmount() {
-        window.removeEventListener("cartUpdated", this.handleCartUpdate);
+    componentDidUpdate(prevProps) {
+        const { cartItems, loading, error } = this.props;
+        // Nếu có thay đổi từ props thì cập nhật loading và error (không lưu cartItems vào state vì đã có từ props)
+        if (prevProps.cartItems !== cartItems) {
+            this.setState({ loading: false });
+        }
+        if (prevProps.loading !== loading) {
+            this.setState({ loading });
+        }
+        if (prevProps.error !== error) {
+            this.setState({ error });
+        }
     }
 
     render() {
-        const { showCategories, cartItemCount, showCart, cartItems } =
-            this.state;
+        const { showCategories, showCart } = this.state;
+        const { user, cartItems } = this.props;
+        const cartItemCount =
+            cartItems && cartItems.data ? cartItems.data.total_items : 0;
 
         const categories = [
             { name: "Văn học", path: "/categories/van-hoc" },
@@ -156,8 +137,8 @@ class Header extends Component {
                                 </Nav.Link>
 
                                 <Nav>
-                                    {this.props.user ? (
-                                        <AccountMenu user={this.props.user} />
+                                    {user ? (
+                                        <AccountMenu user={user} />
                                     ) : (
                                         <>
                                             <Nav.Link as={Link} to="/login">
@@ -186,6 +167,13 @@ class Header extends Component {
 
 const mapStateToProps = (state) => ({
     user: state.userReducer.user,
+    cartItems: state.cartReducer.cartItems,
 });
 
-export default connect(mapStateToProps)(Header);
+const mapDispatchToProps = (dispatch) => {
+    return {
+        getCartItems: () => dispatch(getCartItems()),
+    };
+};
+
+export default connect(mapStateToProps, mapDispatchToProps)(Header);

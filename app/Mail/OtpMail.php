@@ -25,7 +25,7 @@ class OtpMail extends Mailable
 
     public function build()
     {
-        return $this->subject('Xác thực số điện thoại')
+        return $this->subject('Xác thực người nhận hàng')
                     ->view('emails.otp'); // File view blade
     }
 }

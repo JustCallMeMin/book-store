@@ -314,12 +314,12 @@ class OrderService
             $context = stream_context_create($options);
             $response = file_get_contents($url, false, $context);
             Log::info('GHN Response', ['response' => $response]);
-            if ($response['code'] == 200) {
-                $order->ship_code = $response['data']['order_code'];
+            $data = json_decode($response, true);
+            if ($data['code'] == 200) {
+                $order->ship_code = $data['data']['order_code'];
                 $order->shipping_method = "Car";
                 $order->save();
             }
-            $data = json_decode($response, true);
 
             return collect($data)->toArray();
         } catch (\Exception $e) {
@@ -380,8 +380,8 @@ class OrderService
             ->first();
 
         //'picking','picked','storing','transporting','sorting','delivering','delivered','completed','cancelled','refunded','delivery_fail','returning','returned'
-        $status =['picking','picked','storing','transporting','sorting','delivering','delivered','completed','cancelled','refunded','delivery_fail','returning','returned'];
-        if(in_array($latestLog['status'],$status)){
+        $status = ['picking', 'picked', 'storing', 'transporting', 'sorting', 'delivering', 'delivered', 'completed', 'cancelled', 'refunded', 'delivery_fail', 'returning', 'returned'];
+        if (in_array($latestLog['status'], $status)) {
             $order->status = $latestLog['status'];
             if ($order->status === 'picked') {
                 $carbon = Carbon::parse($latestLog['updated_date'])->setTimezone('Asia/Ho_Chi_Minh');
@@ -392,9 +392,77 @@ class OrderService
             }
             $order->save();
             return response()->json([
-                'message'=>"Cập nhật trạng thái thành công"
+                'message' => "Cập nhật trạng thái thành công"
             ]);
         }
         return null;
     }
+
+    /**
+     * Lấy danh sách Order
+     */
+    public function getOrders(): ?JsonResponse
+    {
+        $orders = Order::all();
+        $result = [];
+
+        foreach ($orders as $order) {
+            $order_ship = $this->getOrderDetail($order->order_code);
+
+            $result[] = [
+                'order' => $order,
+                'logs' => $order_ship['log'] ?? null,
+                'lead_time' => $order_ship['leadtime'] ?? null,
+            ];
+        }
+
+        return response()->json([
+            'orders' => $result
+        ], 200);
+    }
+
+    /**
+     * Lấy Order theo order_code
+     */
+    public function getOrderByCode($order_code): ?JsonResponse
+    {
+        $order = Order::where('order_code', $order_code)->first();
+        $order_ship = $this->getOrderDetail($order_code);
+        if (!$order) {
+            return response()->json(["error: Lỗi không tìm thấy đơn hàng"], 404);
+        }
+        if (!$order_ship) {
+            return response()->json(["error: Lỗi không tìm thấy đơn vận chuyển"], 404);
+        }
+        return response()->json([
+            "id" => $order->id,
+            "user_id" => $order->user_id,
+            "order_code" => $order->order_code,
+            "ship_code" => $order->shipcode,
+            "recipient_name" => $order->recipient_name,
+            "recipient_email" => $order->recipient_email,
+            "recipient_phone" => $order->recipient_phone,
+            "recipient_address" => $order->recipient_address,
+            "total_amount" => (int) $order->total_amount,
+            "shipping_fee" => (int) $order->shipping_fee,
+            "tax_amount" => $order->tax_amount,
+            "discount_amount" => (int) $order->dicount_amount,
+            "final_amount" => (int) $order->final_amount,
+            "order_date" => $order->order_date,
+            "payment_date" => $order->payment_date,
+            "shipping_date" => $order->shipping_date,
+            "delivery_date" => $order->delivery_date,
+            "status" => $order->status,
+            "payment_method" => $order->payment_method,
+            "payment_status" => $order->payment_status,
+            "shipping_method" => $order->shipping_method,
+            "notes" => $order->note,
+            "created_at" =>  Carbon::parse($order->created_at)->format('d-m-Y H:i'),
+            "updated_at" =>  Carbon::parse($order->updated_at)->format('d-m-Y H:i'),
+            "logs" => $order_ship["data"]["log"], // mảng ghi lại trạng thái đơn ship
+            "lead_time" =>  Carbon::parse($order_ship["data"]["leadtime"])->format('d-m-Y H:i'), //thời gian giao hàng dự kiến
+        ], 200);
+    }
+
+
 }

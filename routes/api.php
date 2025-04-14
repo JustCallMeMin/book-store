@@ -133,6 +133,9 @@ Route::middleware('auth:api')->group(function () {
         ]);
         Route::post('/add-order-ship',[OrderController::class,'orderShip']);
         Route::post('/detail-order-ship',[OrderController::class,'getOrderShipDetail']);
+        Route::post('/get-order',[OrderController::class,'getOrderByCode']);
+        Route::post('/get-orders',[OrderController::class,'getOrderAll']);
+
     });
 
 });

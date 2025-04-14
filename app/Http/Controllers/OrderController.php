@@ -392,7 +392,7 @@ class OrderController extends Controller
                 Log::warning("MoMo IPN - Không tìm thấy đơn hàng: $orderCode");
                 return response()->json(['message' => 'Order not found'], 404);
             }
-            $order->status = "confirmed";
+            $order->status = "paid";
             $order->payment_status = "paid";
             $order->payment_date = now();
             $order->save();
@@ -516,12 +516,12 @@ class OrderController extends Controller
      */
     public function getOrderShipDetail(Request $request): JsonResponse
     {
-        $orderCode = $request->input('order_code'); 
+        $orderCode = $request->input('order_code');
 
         $result = $this->orderService->getOrderDetail($orderCode);
 
         if ($result && isset($result['code']) && $result['code'] == 200) {
-            $status = $this->orderService->updateStatus($orderCode,$result['data']['log'] );
+            $status = $this->orderService->updateStatus($orderCode, $result['data']['log']);
             return response()->json([
                 'success' => true,
                 'message' => 'Lấy chi tiết đơn hàng thành công',
@@ -537,5 +537,31 @@ class OrderController extends Controller
         ]);
     }
 
+    /**
+     * Lấy Order theo order_code
+     */
+    public function getOrderByCode(Request $request): JsonResponse
+    {
+        try {
+            $order_code = $request->input("order_code");
+            $order = $this->orderService->getOrderByCode($order_code);
+            return $order;
+        }
+        catch(\Exception $e){
+            Log::error("Lỗi khi lấy đơn hàng: ".$e);
+            return response()->json(["error"=>"Lỗi khi lấy đơn hàng: ".$e],500);
+        }
+    }
 
+    public function getOrderAll(Request $request): JsonResponse
+    {
+        try{
+            $orders = $this->orderService->getOrders();
+
+        return $orders;
+        }catch(\Exception $e){
+            Log::error("Lỗi khi lấy danh sách đơn hàng: ".$e);
+            return response()->json(["error"=>"Lỗi khi lấy danh sách đơn hàng: ".$e],500);
+        }
+    }
 }

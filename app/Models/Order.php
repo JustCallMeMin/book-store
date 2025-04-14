@@ -18,6 +18,7 @@ class Order extends Model
     protected $fillable = [
         'order_code',
         'user_id',
+        'ship_code',
         'recipient_name',
         'recipient_phone',
         'recipient_address',

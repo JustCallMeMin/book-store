@@ -13,6 +13,16 @@ class Book extends Model
 {
     use HasFactory, SoftDeletes;
 
+    protected $dates = ['deleted_at'];
+
+    /**
+     * Cache tags cho model này
+     */
+    public static function getCacheTags()
+    {
+        return ['books'];
+    }
+
     protected $fillable = [
         'gutendex_id',
         'google_books_id',

@@ -28,6 +28,6 @@ class Author extends Model
      */
     public function books(): BelongsToMany
     {
-        return $this->belongsToMany(Book::class, 'book_authors', 'author_id', 'book_id');
+        return $this->belongsToMany(Book::class, 'book_authors', 'author_id', 'book_id')->whereNull('books.deleted_at');
     }
 } 

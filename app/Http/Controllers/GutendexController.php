@@ -65,11 +65,12 @@ class GutendexController extends Controller
         
         // Kiểm tra cache (10 phút)
         if (Cache::has($cacheKey)) {
-            return response()->json(Cache::get($cacheKey));
+            // Xoá cache nếu có thay đổi về xoá sách
+            Cache::forget($cacheKey);
         }
         
-        // Logic tìm kiếm và query hiện tại
-        $query = Book::with(['authors', 'categories', 'publisher']);
+        // Logic tìm kiếm và query hiện tại - đảm bảo chỉ lấy sách chưa bị xóa
+        $query = Book::with(['authors', 'categories', 'publisher']);  // SoftDeletes sẽ tự động loại bỏ các sách đã xóa
         
         // Filter theo search term
         if ($search) {
@@ -227,15 +228,23 @@ class GutendexController extends Controller
             return response()->json(Cache::get($cacheKey));
         }
         
-        $book = Book::with(['authors', 'categories', 'publisher'])
-                    ->where('gutendex_id', $id)
-                    ->orWhere('id', $id)
-                    ->first();
+        // Tìm sách bao gồm cả sách đã xóa mềm
+        $book = Book::withTrashed()
+                    ->with(['authors', 'categories', 'publisher'])
+                    ->find($id);
         
         if (!$book) {
             return response()->json([
                 'status' => 404,
                 'error' => 'Book not found in database'
+            ], 404);
+        }
+
+        // Nếu sách đã bị xóa mềm, trả về 404
+        if ($book->trashed()) {
+            return response()->json([
+                'status' => 404,
+                'error' => 'Book has been deleted'
             ], 404);
         }
         
@@ -299,13 +308,11 @@ class GutendexController extends Controller
     }
 
     /**
-     * Xóa một cuốn sách khỏi database
+     * Xóa một cuốn sách khỏi database (soft delete)
      */
     public function destroy($id)
     {
-        $book = Book::where('gutendex_id', $id)
-                    ->orWhere('id', $id)
-                    ->first();
+        $book = Book::find($id);
 
         if (!$book) {
             return response()->json([
@@ -326,17 +333,17 @@ class GutendexController extends Controller
                 ], 400);
             }
 
-            // Xóa các quan hệ
-            $book->authors()->detach();
-            $book->categories()->detach();
-
-            // Xóa sách
+            // Soft delete sách - không xóa các quan hệ để có thể khôi phục
             $book->delete();
-
-            // Xóa cache
-            Cache::forget("books:detail:{$id}");
-            Cache::forget("books:detail:{$book->gutendex_id}");
-            $this->clearListCaches();
+            
+            // Xóa cache an toàn 
+            try {
+                Cache::forget("books:detail:{$id}");
+                $this->clearListCaches();
+            } catch (\Exception $e) {
+                // Ghi log lỗi nhưng vẫn tiếp tục xử lý
+                \Illuminate\Support\Facades\Log::error('Error clearing cache: ' . $e->getMessage());
+            }
 
             DB::commit();
 
@@ -925,44 +932,96 @@ class GutendexController extends Controller
     }
 
     /**
+     * Khôi phục một cuốn sách đã xóa mềm
+     */
+    public function restore($id)
+    {
+        $book = Book::withTrashed()->find($id);
+
+        if (!$book) {
+            return response()->json([
+                'status' => 404,
+                'error' => 'Book not found in database'
+            ], 404);
+        }
+
+        if (!$book->trashed()) {
+            return response()->json([
+                'status' => 400,
+                'error' => 'Sách này chưa bị xóa'
+            ], 400);
+        }
+
+        try {
+            DB::beginTransaction();
+
+            // Khôi phục sách
+            $book->restore();
+            
+            // Xóa cache an toàn 
+            try {
+                Cache::forget("books:detail:{$id}");
+                $this->clearListCaches();
+            } catch (\Exception $e) {
+                // Ghi log lỗi nhưng vẫn tiếp tục xử lý
+                \Illuminate\Support\Facades\Log::error('Error clearing cache: ' . $e->getMessage());
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'status' => 200,
+                'message' => 'Khôi phục sách thành công'
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'status' => 500,
+                'error' => 'Có lỗi xảy ra khi khôi phục sách: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Xóa cache danh sách
      */
     private function clearListCaches()
     {
-        if (config('cache.default') === 'redis' && Cache::getStore() instanceof \Illuminate\Cache\RedisStore) {
-            // Pattern matching với Redis
-            $redis = Cache::getRedis();
-            
-            // Xóa cache danh sách sách 
-            $booksListKeys = $redis->keys('books:list:*');
-            foreach ($booksListKeys as $key) {
-                Cache::forget($key);
+        try {
+            // File cache system không hỗ trợ tags, cần xử lý từng key
+            if (config('cache.default') === 'redis' && Cache::getStore() instanceof \Illuminate\Cache\RedisStore) {
+                // Pattern matching với Redis
+                $redis = Cache::getRedis();
+                
+                // Các pattern cache cần xóa
+                $patterns = [
+                    'books:list:*',      // Cache danh sách sách
+                    'books:detail:*',    // Cache chi tiết sách
+                    'authors:*',         // Cache tác giả và sách theo tác giả
+                    'categories:*',      // Cache thể loại và sách theo thể loại
+                    'suggestions:*',     // Cache gợi ý tìm kiếm
+                    'search:*'           // Cache kết quả tìm kiếm
+                ];
+                
+                foreach ($patterns as $pattern) {
+                    $keys = $redis->keys(config('database.redis.options.prefix', '') . $pattern);
+                    foreach ($keys as $key) {
+                        // Xóa prefix để lấy key thực
+                        $realKey = str_replace(config('database.redis.options.prefix', ''), '', $key);
+                        Cache::forget($realKey);
+                    }
+                }
+            } else {
+                // Fallback cho non-Redis cache
+                // Xóa các key cụ thể cho file cache
+                Cache::forget('categories:all');
+                Cache::forget('authors:all');
+                Cache::forget('books:list');
+                Cache::forget('books:search');
             }
-            
-            // Xóa cache danh sách tác giả và sách theo tác giả
-            Cache::forget('authors:all');
-            $authorBooksKeys = $redis->keys('authors:*:books:*');
-            foreach ($authorBooksKeys as $key) {
-                Cache::forget($key);
-            }
-            
-            // Xóa cache danh sách thể loại và sách theo thể loại
-            Cache::forget('categories:all');
-            $categoryBooksKeys = $redis->keys('categories:*:books:*');
-            foreach ($categoryBooksKeys as $key) {
-                Cache::forget($key);
-            }
-            
-            // Xóa cache gợi ý tìm kiếm
-            $suggestionKeys = $redis->keys('suggestions:*');
-            foreach ($suggestionKeys as $key) {
-                Cache::forget($key);
-            }
-        } else {
-            // Fallback cho non-Redis cache
-            Cache::forget('categories:all');
-            Cache::forget('authors:all');
-            // Không thể làm pattern matching với non-Redis stores
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Error clearing cache: ' . $e->getMessage());
         }
     }
 

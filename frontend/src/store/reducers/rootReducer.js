@@ -4,6 +4,7 @@ import bookReducer from "./book.reducer";
 import categoryReducer from "./category.reducer";
 import authorReducer from "./author.reducer";
 import publisherReducer from "./publisher.reducer";
+import cartReducer from "./cart.reducer";
 
 const rootReducer = combineReducers({
     userReducer,
@@ -11,6 +12,7 @@ const rootReducer = combineReducers({
     categoryReducer,
     authorReducer,
     publisherReducer,
+    cartReducer,
 });
 
 export default rootReducer;

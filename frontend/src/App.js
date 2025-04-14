@@ -7,6 +7,7 @@ import BookDetail from "./pages/BookDetail";
 import RegisterPage from "./pages/RegisterPage";
 import CategoryBooks from "./pages/CategoryBooks";
 import ProfilePage from "./pages/ProfilePage";
+import Checkout from "./pages/Checkout";
 import { Provider } from "react-redux";
 import store from "./store/config/store";
 import ProtectedRoute from "./admin/components/ProtectedRoute";
@@ -33,6 +34,7 @@ function App() {
                         />
                         <Route path="profile" element={<ProfilePage />} />
                         <Route path="book/:id" element={<BookDetail />} />
+                        <Route path="checkout" element={<Checkout />} />
                     </Route>
                     <Route
                         path="/accessDenied"

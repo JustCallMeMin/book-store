@@ -226,10 +226,10 @@ class OrderService
         $totalPages = $books->sum('page_count'); // Tổng số trang của tất cả các sản phẩm trong giỏ hàng
 
         // Tính toán kích thước và trọng lượng
-        $weight = 50 * $totalPages; // // Giả sử mỗi trang nặng 50 gram
-        $length = 30; // Chiều dài 30cm cho mỗi sản phẩm
-        $width = 25;  // Chiều rộng 25cm cho mỗi sản phẩm
-        $height = (int) ceil(0.01 * $totalPages + 0.1 * $quantity); // Chiều cao 0.01cm cho mỗi trang và 0.05cm cho mỗi tờ bìa mỗi sản phẩm
+        $weight = 1 * $totalPages; // // Giả sử mỗi trang nặng 50 gram
+        $length = 20; // Chiều dài 30cm cho mỗi sản phẩm
+        $width = 10;  // Chiều rộng 25cm cho mỗi sản phẩm
+        $height = (int) ceil(0.01 * $totalPages + 0.05 * $quantity); // Chiều cao 0.01cm cho mỗi trang và 0.05cm cho mỗi tờ bìa mỗi sản phẩm
 
         return compact('weight', 'height', 'length', 'width');
     }

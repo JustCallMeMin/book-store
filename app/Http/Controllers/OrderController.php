@@ -546,22 +546,70 @@ class OrderController extends Controller
             $order_code = $request->input("order_code");
             $order = $this->orderService->getOrderByCode($order_code);
             return $order;
-        }
-        catch(\Exception $e){
-            Log::error("Lỗi khi lấy đơn hàng: ".$e);
-            return response()->json(["error"=>"Lỗi khi lấy đơn hàng: ".$e],500);
+        } catch (\Exception $e) {
+            Log::error("Lỗi khi lấy đơn hàng: " . $e);
+            return response()->json(["error" => "Lỗi khi lấy đơn hàng: " . $e], 500);
         }
     }
 
+    /**
+     * Lấy danh sách tất cả order
+     * @param \Illuminate\Http\Request $request
+     * @return JsonResponse|mixed|null
+     */
     public function getOrderAll(Request $request): JsonResponse
     {
-        try{
+        try {
             $orders = $this->orderService->getOrders();
 
-        return $orders;
-        }catch(\Exception $e){
-            Log::error("Lỗi khi lấy danh sách đơn hàng: ".$e);
-            return response()->json(["error"=>"Lỗi khi lấy danh sách đơn hàng: ".$e],500);
+            return $orders;
+        } catch (\Exception $e) {
+            Log::error("Lỗi khi lấy danh sách đơn hàng: " . $e);
+            return response()->json(["error" => "Lỗi khi lấy danh sách đơn hàng: " . $e], 500);
         }
+    }
+
+    /**
+     * Lấy danh sách order của user
+     * @param \Illuminate\Http\Request $request
+     * @return JsonResponse|mixed
+     */
+    public function getOdersByUser(Request $request): JsonResponse
+    {
+        try {
+            $user = $request->user();
+            $orders = $this->orderService->getOrderByUser($user->id);
+            return $orders;
+        } catch (\Exception $e) {
+            Log::error("Lỗi khi lấy danh sách đơn hàng: " . $e);
+            return response()->json(["error" => "Lỗi khi lấy danh sách đơn hàng: " . $e], 500);
+        }
+
+    }
+
+    /**
+     * Admin xác nhận đơn hàng
+     */
+    public function confirmOrder(Request $request): JsonResponse
+    {
+        $order_code = $request->input('order_code');
+        $result = $this->orderService->confirmOrder($order_code);
+        // return $result;
+        if($result->status()==200){
+            $order_ship = $this->orderService->createOrderShip($order_code);
+            if($order_ship['success'] == true){
+                return response()->json([
+                    "message"=>"Đã tạo đơn giao hàng thành công",
+                    "data"=>$order_ship
+                ]);
+            }
+            return response()->json([
+                "message"=>"Tạo đơn giao hàng thất bại"
+            ],500);
+        }
+        return response()->json([
+            "message"=>"Không tìm thấy đơn hàng"
+        ],404);
+
     }
 }

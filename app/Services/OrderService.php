@@ -240,7 +240,6 @@ class OrderService
     {
         try {
             $order = Order::where('order_code', $order_code)->first();
-            Log::info('Order: ' . $order->order_code . ' order_ship: ' . $order);
             $items = OrderItem::where('order_id', $order->id)
                 ->select('book_id', 'quantity')
                 ->get();
@@ -258,6 +257,7 @@ class OrderService
             $parts = array_map('trim', explode(',', $fullAddress));
 
             // Gán vào các biến tương ứng
+            // $address = $parts[0] ?? '';
             $ward = $parts[1] ?? '';
             $district = $parts[2] ?? '';
             $province = $parts[3] ?? '';
@@ -303,10 +303,9 @@ class OrderService
                 'required_note' => 'KHONGCHOXEMHANG'
             ];
             Log::info('GHN Request Data', $data);
-
             $options = [
                 'http' => [
-                    'method' => 'POST',
+                    'method' => 'GET',
                     'header' => implode("\r\n", $headers),
                     'content' => json_encode($data),
                 ]
@@ -314,24 +313,21 @@ class OrderService
 
             $context = stream_context_create($options);
             $response = file_get_contents($url, false, $context);
-
-            // Giải mã JSON ngay sau khi nhận response
-            $responseData = json_decode($response, true);
-            Log::info('GHN Response', ['response' => $responseData]);
-
-            // Kiểm tra code từ mảng đã giải mã
-            if (isset($responseData['code']) && $responseData['code'] == 200) {
-                $order->ship_code = $responseData['data']['order_code'];
+            Log::info('GHN Response', ['response' => $response]);
+            $data = json_decode($response, true);
+            if ($data['code'] == 200) {
+                $order->ship_code = $data['data']['order_code'];
                 $order->shipping_method = "Car";
                 $order->save();
             }
 
-            return collect($responseData)->toArray();
+            return collect($data)->toArray();
         } catch (\Exception $e) {
             Log::error('Error creating order ship', ['error' => $e->getMessage()]);
             return [];
         }
     }
+
     /**
      * Lấy chi tiết đơn ship
      */

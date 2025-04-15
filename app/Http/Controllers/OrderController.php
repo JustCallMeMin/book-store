@@ -597,7 +597,7 @@ class OrderController extends Controller
         // return $result;
         if($result->status()==200){
             $order_ship = $this->orderService->createOrderShip($order_code);
-            if($order_ship['success'] == true){
+            if($order_ship['code'] == 200 ){
                 return response()->json([
                     "message"=>"Đã tạo đơn giao hàng thành công",
                     "data"=>$order_ship
@@ -607,9 +607,7 @@ class OrderController extends Controller
                 "message"=>"Tạo đơn giao hàng thất bại"
             ],500);
         }
-        return response()->json([
-            "message"=>"Không tìm thấy đơn hàng"
-        ],404);
+        return $result;
 
     }
 }

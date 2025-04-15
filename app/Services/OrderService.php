@@ -412,7 +412,7 @@ class OrderService
 
             $result[] = [
                 'order' => $order,
-                'logs' => $order_ship['data']['log'] ?? null,
+                'logs' => data_get($order_ship, 'data.log'),
                 'lead_time' => $order_ship['data']['leadtime'] ?? null,
             ];
         }
@@ -461,7 +461,7 @@ class OrderService
             "notes" => $order->note,
             "created_at" => Carbon::parse($order->created_at)->format('d-m-Y H:i'),
             "updated_at" => Carbon::parse($order->updated_at)->format('d-m-Y H:i'),
-            "logs" => $order_ship["data"]["log"], // mảng ghi lại trạng thái đơn ship
+            "logs" => data_get($order_ship, 'data.log'), // mảng ghi lại trạng thái đơn ship
             "lead_time" => Carbon::parse($order_ship["data"]["leadtime"])->format('d-m-Y H:i'), //thời gian giao hàng dự kiến
         ], 200);
     }
@@ -484,7 +484,7 @@ class OrderService
 
             $result[] = [
                 'order' => $order,
-                'logs' => $order_ship['data']['log'] ?? null,
+                'logs' =>data_get($order_ship, 'data.log'),
                 'lead_time' => $order_ship['data']['leadtime'] ?? null,
             ];
         }

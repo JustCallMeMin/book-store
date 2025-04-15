@@ -11,6 +11,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Models\Cart;
 use App\Models\OrderItem;
+use App\Mail\OtpMail;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Http\Client\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
@@ -24,9 +26,9 @@ class OrderService
 {
     /**
      * API Lấy mã Tỉnh/Thành phố
-     * @return array
+     * @return JsonResponse
      */
-    public function getProvinces(): array
+    public function getProvinces(): JsonResponse
     {
         try {
             $url = 'https://dev-online-gateway.ghn.vn/shiip/public-api/master-data/province';
@@ -45,9 +47,17 @@ class OrderService
             $context = stream_context_create($options);
             $response = file_get_contents($url, false, $context);
 
+            if (!$response) {
+                throw new \Exception('Không nhận được phản hồi từ API');
+            }
+
             $data = json_decode($response, true);
 
-            return collect($data['data'] ?? [])
+            if (!isset($data['data'])) {
+                throw new \Exception('Dữ liệu trả về không hợp lệ');
+            }
+
+            $provinces = collect($data['data'])
                 ->filter(fn($d) => ($d['IsEnable'] ?? 0) == 1)
                 ->map(fn($d) => [
                     'province_id' => $d['ProvinceID'],
@@ -55,19 +65,31 @@ class OrderService
                 ])
                 ->values()
                 ->toArray();
+
+            return response()->json([
+                'success' => true,
+                'status' => 200,
+                'data' => [
+                    'total_items' => count($provinces),
+                    'provinces' => $provinces,
+                ]
+            ], 200);
         } catch (\Exception $e) {
             Log::error('Error getting provinces', ['error' => $e->getMessage()]);
-            return [];
+            return response()->json([
+                'success' => false,
+                'message' => 'Có lỗi xảy ra khi lấy danh sách tỉnh/thành phố',
+                'error' => $e->getMessage()
+            ], 500);
         }
     }
-
 
     /**
      * API Lấy mã Quận/Huyện theo mã Tỉnh/Thành phố
      * @param int $provinceId
-     * @return array
+     * @return JsonResponse
      */
-    public function getDistricts($provinceId): array
+    public function getDistricts($provinceId): JsonResponse
     {
         try {
             $url = 'https://dev-online-gateway.ghn.vn/shiip/public-api/master-data/district?province_id=' . $provinceId;
@@ -86,9 +108,17 @@ class OrderService
             $context = stream_context_create($options);
             $response = file_get_contents($url, false, $context);
 
+            if (!$response) {
+                throw new \Exception('Không nhận được phản hồi từ API');
+            }
+
             $data = json_decode($response, true);
 
-            return collect($data['data'] ?? [])
+            if (!isset($data['data'])) {
+                throw new \Exception('Dữ liệu trả về không hợp lệ');
+            }
+
+            $districts = collect($data['data'])
                 ->filter(fn($d) => ($d['IsEnable'] ?? 0) == 1)
                 ->map(fn($d) => [
                     'district_id' => $d['DistrictID'],
@@ -96,18 +126,32 @@ class OrderService
                 ])
                 ->values()
                 ->toArray();
+
+            return response()->json([
+                'success' => true,
+                'status' => 200,
+                'data' => [
+                    'total_items' => count($districts),
+                    'districts' => $districts,
+                ]
+            ], 200);
         } catch (\Exception $e) {
             Log::error('Error getting districts', ['error' => $e->getMessage()]);
-            return [];
+            return response()->json([
+                'success' => false,
+                'message' => 'Có lỗi xảy ra khi lấy danh sách quận/huyện',
+                'error' => $e->getMessage()
+            ], 500);
         }
     }
+
 
     /**
      * API Lấy mã Phường/Xã theo mã Quận/Huyện
      * @param int $districtId
-     * @return array
+     * @return JsonResponse
      */
-    public function getWards(int $districtId): array
+    public function getWards(int $districtId): JsonResponse
     {
         try {
             $url = 'https://dev-online-gateway.ghn.vn/shiip/public-api/master-data/ward?district_id=' . $districtId;
@@ -126,9 +170,17 @@ class OrderService
             $context = stream_context_create($options);
             $response = file_get_contents($url, false, $context);
 
+            if (!$response) {
+                throw new \Exception('Không nhận được phản hồi từ API');
+            }
+
             $data = json_decode($response, true);
 
-            return collect($data['data'] ?? [])
+            if (!isset($data['data'])) {
+                throw new \Exception('Dữ liệu trả về không hợp lệ');
+            }
+
+            $wards = collect($data['data'])
                 ->filter(fn($d) => ($d['Status'] ?? 0) == 1)
                 ->map(fn($d) => [
                     'ward_id' => $d['WardCode'],
@@ -136,17 +188,32 @@ class OrderService
                 ])
                 ->values()
                 ->toArray();
+
+            return response()->json([
+                'success' => true,
+                'status' => 200,
+                'message' => 'Lấy danh sách phường/xã thành công',
+                'data' => [
+                    'total_items' => count($wards),
+                    'wards' => $wards,
+                ]
+            ], 200);
         } catch (\Exception $e) {
             Log::error('Error getting wards', ['error' => $e->getMessage()]);
-            return [];
+            return response()->json([
+                'success' => false,
+                'message' => 'Có lỗi xảy ra khi lấy danh sách phường/xã',
+                'error' => $e->getMessage()
+            ], 500);
         }
     }
+
 
     /**
      * Tính phí vận chuyển
      *
      */
-    public function calculateShippingFee($insurance_value, $to_ward_code, $to_district_id, $weight, $length, $width, $height): array
+    public function calculateShippingFee($insurance_value, $to_ward_code, $to_district_id, $weight, $length, $width, $height): JsonResponse
     {
         try {
             $url = 'https://dev-online-gateway.ghn.vn/shiip/public-api/v2/shipping-order/fee';
@@ -167,9 +234,10 @@ class OrderService
                 'width' => $width,
             ];
             Log::info('GHN Request Data', $data);
+
             $options = [
                 'http' => [
-                    'method' => 'GET',
+                    'method' => 'POST',
                     'header' => implode("\r\n", $headers),
                     'content' => json_encode($data),
                 ]
@@ -178,14 +246,34 @@ class OrderService
             $context = stream_context_create($options);
             $response = file_get_contents($url, false, $context);
 
+            if (!$response) {
+                throw new \Exception('Không nhận được phản hồi từ API');
+            }
+
             $data = json_decode($response, true);
 
-            return collect($data['data'])->toArray();
+            if (!isset($data['data'])) {
+                throw new \Exception('Dữ liệu trả về không hợp lệ');
+            }
+
+            return response()->json([
+                'success' => true,
+                'status' => 200,
+                'message' => 'Tính phí vận chuyển thành công',
+                'data' => [
+                    'shipping_fee' => $data['data'],
+                ]
+            ], 200);
         } catch (\Exception $e) {
             Log::error('Error calculating shipping fee', ['error' => $e->getMessage()]);
-            return [];
+            return response()->json([
+                'success' => false,
+                'message' => 'Có lỗi xảy ra khi tính phí vận chuyển',
+                'error' => $e->getMessage()
+            ], 500);
         }
     }
+
 
     /**
      * tìm kiếm đơn hàng theo mã đơn hàng
@@ -197,13 +285,6 @@ class OrderService
     }
 
     /**
-     * thanh toán đơn hàng
-     */
-
-    /**
-     * update đã thanh toán
-     */
-    /**
      * Cập nhật trạng thái đã thanh toán
      */
     public function updateStatusPaid(string $orderCode)
@@ -214,6 +295,7 @@ class OrderService
                 'payment_status' => 'paid'
             ]);
     }
+
     /**
      * Tính chiều cao, chiều rộng, chiều dài, cân nặng
      */
@@ -233,6 +315,124 @@ class OrderService
 
         return compact('weight', 'height', 'length', 'width');
     }
+
+    /**
+     * Summary of sendOtp
+     * @param mixed $user
+     * @param mixed $data
+     * @return JsonResponse|mixed
+     */
+    public function sendOtp($user, $data): JsonResponse
+    {
+        try {
+            $otp = mt_rand(100000, 999999);
+            Redis::set("otp:{$user->id}", $otp);
+            Redis::expire("otp:{$user->id}", 300);
+
+            $fullAddress = "{$data['address']}, {$data['ward']}, {$data['district']}, {$data['province']}";
+            Mail::to($user->email)->send(new OtpMail($data['name'], $data['phone'], $fullAddress, $otp, $user->email));
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Mã OTP đã được gửi qua email.',
+                'data' => ['email' => $user->email, 'phone' => $data['phone']]
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('Error sending OTP', ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'message' => 'Có lỗi xảy ra', 'error' => $e->getMessage()], 500);
+        }
+    }
+    /**
+     * Summary of verifyOtp
+     * @param mixed $user
+     * @param mixed $otp
+     * @return JsonResponse|mixed
+     */
+    public function verifyOtp($user, $otp): JsonResponse
+    {
+        try {
+            $storedOtp = Redis::get("otp:{$user->id}");
+            if (!$storedOtp) {
+                return response()->json(['success' => false, 'message' => 'Mã OTP đã hết hạn hoặc không tồn tại'], 400);
+            }
+
+            if ($otp == $storedOtp) {
+                Redis::del("otp:{$user->id}");
+                return response()->json(['success' => true, 'message' => 'Xác thực mã OTP thành công'], 200);
+            }
+
+            return response()->json(['success' => false, 'message' => 'Mã OTP không đúng'], 400);
+        } catch (\Exception $e) {
+            Log::error('Error verifying OTP', ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'message' => 'Có lỗi xảy ra khi xác thực mã OTP', 'error' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Summary of processIpn Momo
+     * @param array $data
+     * @return JsonResponse|mixed
+     */
+    public function processIpn(array $data): JsonResponse
+    {
+        try {
+            Log::info("MoMo IPN Received: ", $data);
+
+            // Kiểm tra chữ ký để đảm bảo tính an toàn
+            $signature = $data['signature'] ?? '';
+            $rawHash = "accessKey=" . env('MOMO_ACCESS_KEY') .
+                "&amount=" . $data['amount'] .
+                "&extraData=" . $data['extraData'] .
+                "&message=" . $data['message'] .
+                "&orderId=" . $data['orderId'] .
+                "&orderInfo=" . $data['orderInfo'] .
+                "&orderType=" . $data['orderType'] .
+                "&partnerCode=" . $data['partnerCode'] .
+                "&payType=" . $data['payType'] .
+                "&requestId=" . $data['requestId'] .
+                "&responseTime=" . $data['responseTime'] .
+                "&resultCode=" . $data['resultCode'] .
+                "&transId=" . $data['transId'];
+
+            $expectedSignature = hash_hmac('sha256', $rawHash, env('MOMO_SECRET_KEY'));
+
+            if ($signature !== $expectedSignature) {
+                Log::warning("MoMo IPN Signature mismatch!");
+                return response()->json(['success' => false, 'message' => 'Invalid signature'], 400);
+            }
+
+            // Xử lý trạng thái đơn hàng
+            if ($data['resultCode'] == 0) {
+                Log::info("MoMo IPN - Thành công cho đơn hàng: " . $data['orderId']);
+
+                $extraData = json_decode(base64_decode($data['extraData']), true);
+                $orderCode = $extraData['orderCode'] ?? null;
+
+                $order = Order::where('order_code', $orderCode)->first();
+
+                if (!$order) {
+                    Log::warning("MoMo IPN - Không tìm thấy đơn hàng: $orderCode");
+                    return response()->json(['success' => false, 'message' => 'Order not found'], 404);
+                }
+
+                $order->status = "paid";
+                $order->payment_status = "paid";
+                $order->payment_date = now();
+                $order->save();
+
+                Log::info('Cập nhật đơn hàng ' . $order->order_code . ' thành công');
+            } else {
+                Log::warning("MoMo IPN - Giao dịch thất bại. Mã đơn: {$data['orderId']}, Lý do: {$data['message']}");
+            }
+
+            return response()->json(['success' => true, 'message' => 'IPN processed successfully'], 200);
+        } catch (\Exception $e) {
+            Log::error('Error processing MoMo IPN', ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'message' => 'Có lỗi xảy ra', 'error' => $e->getMessage()], 500);
+        }
+    }
+
+
     /**
      * Tạo đơn giao hàng
      */
@@ -331,188 +531,282 @@ class OrderService
     /**
      * Lấy chi tiết đơn ship
      */
-    public function getOrderDetail(string $orderCode): ?array
+    public function getOrderDetail(string $orderCode): JsonResponse
     {
-        $url = 'https://dev-online-gateway.ghn.vn/shiip/public-api/v2/shipping-order/detail';
-        $order = Order::where('order_code', $orderCode)->first();
-        Log::info('Order: ' . $order->order_code . ' order_ship: ' . $order->ship_code);
-        if (!$order) {
-            return null;
+        try {
+            $url = 'https://dev-online-gateway.ghn.vn/shiip/public-api/v2/shipping-order/detail';
+            $order = Order::where('order_code', $orderCode)->first();
+
+            if (!$order || !$order->ship_code) {
+                return response()->json(['success' => false, 'message' => 'Không tìm thấy đơn hàng hoặc đơn vận chuyển'], 404);
+            }
+
+            $headers = [
+                "Content-Type: application/json",
+                "Token: " . env('GHN_API_TOKEN'),
+            ];
+            $data = ["order_code" => $order->ship_code];
+
+            $options = [
+                'http' => [
+                    'method' => 'POST',
+                    'header' => implode("\r\n", $headers),
+                    'content' => json_encode($data),
+                ]
+            ];
+
+            $context = stream_context_create($options);
+            $response = file_get_contents($url, false, $context);
+            $data = json_decode($response, true);
+
+            if (!isset($data['code']) || $data['code'] != 200) {
+                throw new \Exception('Dữ liệu phản hồi không hợp lệ');
+            }
+
+            return response()->json(['success' => true, 'data' => $data['data']], 200);
+        } catch (\Exception $e) {
+            Log::error('Error getting order details', ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'message' => 'Có lỗi xảy ra khi lấy chi tiết đơn hàng', 'error' => $e->getMessage()], 500);
         }
-        if (!$order->ship_code) {
-            return null;
-        }
-        $headers = [
-            "Content-Type: application/json",
-            "Token: " . env('GHN_API_TOKEN'),
-        ];
-        $data = ["order_code" => $order->ship_code];
-        $options = [
-            'http' => [
-                'method' => 'POST',
-                'header' => implode("\r\n", $headers),
-                'content' => json_encode($data),
-            ]
-        ];
-
-        $context = stream_context_create($options);
-        Log::info('GHN Request Data', $data);
-        $response = file_get_contents($url, false, $context);
-
-
-
-        $result = json_decode($response, true); // Chuyển JSON string thành mảng
-
-        if (isset($result['code']) && $result['code'] == 200) {
-            return collect($result)->toArray(); // Trả về chi tiết đơn hàng
-        }
-
-        return null;
     }
+
 
     /**
      * Cập nhật trạng thái vận chuyển
      */
-    public function updateStatus($orderCode, $logs): ?JsonResponse
+    public function updateStatus(string $orderCode): JsonResponse
     {
-        $order = Order::where('order_code', $orderCode)->first();
-        if (!$order) {
-            return null;
-        }
-        $latestLog = collect($logs)
-            ->sortByDesc('updated_date')
-            ->first();
+        try {
+            // Lấy chi tiết đơn hàng để lấy logs
+            $orderDetailResponse = $this->getOrderDetail($orderCode);
+            $orderDetail = $orderDetailResponse->getData(true);
 
-        //'picking','picked','storing','transporting','sorting','delivering','delivered','completed','cancelled','refunded','delivery_fail','returning','returned'
-        $status = ['picking', 'picked', 'storing', 'transporting', 'sorting', 'delivering', 'delivered', 'completed', 'cancelled', 'refunded', 'delivery_fail', 'returning', 'returned'];
-        if (in_array($latestLog['status'], $status)) {
+            if (!$orderDetail || empty($orderDetail['data']['log'])) {
+                return response()->json(['success' => false, 'message' => 'Không tìm thấy logs vận chuyển'], 404);
+            }
+
+            $logs = $orderDetail['data']['log'];
+            $latestLog = collect($logs)->sortByDesc('updated_date')->first();
+
+            $order = Order::where('order_code', $orderCode)->first();
+            if (!$order) {
+                return response()->json(['success' => false, 'message' => 'Không tìm thấy đơn hàng'], 404);
+            }
+
+            $validStatuses = ['picking', 'picked', 'storing', 'transporting', 'sorting', 'delivering', 'delivered', 'completed', 'cancelled', 'refunded', 'delivery_fail', 'returning', 'returned'];
+
+            if (!in_array($latestLog['status'], $validStatuses)) {
+                return response()->json(['success' => false, 'message' => 'Trạng thái không hợp lệ'], 400);
+            }
+
             $order->status = $latestLog['status'];
             if ($order->status === 'picked') {
-                $carbon = Carbon::parse($latestLog['updated_date'])->setTimezone('Asia/Ho_Chi_Minh');
-                $order->shipping_date = $carbon;
+                $order->shipping_date = Carbon::parse($latestLog['updated_date'])->setTimezone('Asia/Ho_Chi_Minh');
             } elseif ($order->status === 'delivered') {
-                $carbon = Carbon::parse($latestLog['updated_date'])->setTimezone('Asia/Ho_Chi_Minh');
-                $order->delivery_date = $carbon;
+                $order->delivery_date = Carbon::parse($latestLog['updated_date'])->setTimezone('Asia/Ho_Chi_Minh');
             }
             $order->save();
-            return response()->json([
-                'message' => "Cập nhật trạng thái thành công"
-            ]);
+            return response()->json(['success' => true, 'message' => 'Cập nhật trạng thái thành công', 'data' => $order], 200);
+        } catch (\Exception $e) {
+            Log::error('Error updating order status', ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'message' => 'Có lỗi xảy ra khi cập nhật trạng thái đơn hàng', 'error' => $e->getMessage()], 500);
         }
-        return null;
     }
+
 
     /**
      * Lấy danh sách Order
      */
-    public function getOrders(): ?JsonResponse
+    public function getOrders(): JsonResponse
     {
-        $orders = Order::all();
-        $result = [];
+        try {
+            $orders = Order::all();
+            if ($orders->isEmpty()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Không có đơn hàng nào',
+                    'data' => []
+                ], 404);
+            }
 
-        foreach ($orders as $order) {
-            $order_ship = $this->getOrderDetail($order->order_code);
+            $result = $orders->map(function ($order) {
+                $order_ship = $order->ship_code ? $this->getOrderDetail($order->order_code)->getData(true) : null;
+                if ($order->ship_code) {
+                    $updateResponse = $this->updateStatus($order->order_code);
+                    $updatedOrder = data_get($updateResponse->getData(true), 'data');
+                }
+                return [
+                    'order' => $updatedOrder,
+                    'logs' => data_get($order_ship, 'data.log', []),
+                    'lead_time' => data_get($order_ship, 'data.leadtime'),
+                ];
+            });
 
-            $result[] = [
-                'order' => $order,
-                'logs' => data_get($order_ship, 'data.log'),
-                'lead_time' => $order_ship['data']['leadtime'] ?? null,
-            ];
+            return response()->json([
+                'success' => true,
+                'message' => 'Lấy danh sách đơn hàng thành công',
+                'data' => $result
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('Error fetching orders', ['error' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Có lỗi xảy ra khi lấy danh sách đơn hàng',
+                'error' => $e->getMessage()
+            ], 500);
         }
-
-        return response()->json([
-            "message" => "Lấy danh sách thành công",
-            'data' => $result
-        ], 200);
     }
 
     /**
      * Lấy Order theo order_code
      */
-    public function getOrderByCode($order_code): ?JsonResponse
+    public function getOrderByCode(string $orderCode): JsonResponse
     {
-        $order = Order::where('order_code', $order_code)->first();
-        $order_ship = $this->getOrderDetail($order_code);
-        if (!$order) {
-            return response()->json(["error: Lỗi không tìm thấy đơn hàng"], 404);
+        try {
+            $order = Order::where('order_code', $orderCode)->first();
+            if ($order->ship_code) {
+                $updateResponse = $this->updateStatus($order->order_code);
+                $order = data_get($updateResponse->getData(true), 'data');
+            }
+            if (!$order) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Không tìm thấy đơn hàng'
+                ], 404);
+            }
+
+            // Lấy thông tin vận chuyển nếu có mã vận chuyển
+            $orderShipResponse = $order->ship_code ? $this->getOrderDetail($orderCode)->getData(true) : null;
+
+            if (!$orderShipResponse) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Không tìm thấy đơn vận chuyển'
+                ], 404);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Lấy đơn hàng thành công',
+                'data' => [
+                    "id" => $order->id,
+                    "user_id" => $order->user_id,
+                    "order_code" => $order->order_code,
+                    "ship_code" => $order->ship_code,
+                    "recipient_name" => $order->recipient_name,
+                    "recipient_email" => $order->recipient_email,
+                    "recipient_phone" => $order->recipient_phone,
+                    "recipient_address" => $order->recipient_address,
+                    "total_amount" => (int) $order->total_amount,
+                    "shipping_fee" => (int) $order->shipping_fee,
+                    "tax_amount" => $order->tax_amount,
+                    "discount_amount" => (int) $order->discount_amount,
+                    "final_amount" => (int) $order->final_amount,
+                    "order_date" => $order->order_date,
+                    "payment_date" => $order->payment_date,
+                    "shipping_date" => $order->shipping_date,
+                    "delivery_date" => $order->delivery_date,
+                    "status" => $order->status,
+                    "payment_method" => $order->payment_method,
+                    "payment_status" => $order->payment_status,
+                    "shipping_method" => $order->shipping_method,
+                    "notes" => $order->note,
+                    "created_at" => Carbon::parse($order->created_at)->format('d-m-Y H:i'),
+                    "updated_at" => Carbon::parse($order->updated_at)->format('d-m-Y H:i'),
+                    "logs" => data_get($orderShipResponse, 'data.log', []),
+                    "lead_time" => Carbon::parse(data_get($orderShipResponse, 'data.leadtime'))->format('d-m-Y H:i'),
+                ]
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('Error fetching order by code', ['error' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Có lỗi xảy ra khi lấy đơn hàng',
+                'error' => $e->getMessage()
+            ], 500);
         }
-        if (!$order_ship) {
-            return response()->json(["error: Lỗi không tìm thấy đơn vận chuyển"], 404);
-        }
-        return response()->json([
-            "id" => $order->id,
-            "user_id" => $order->user_id,
-            "order_code" => $order->order_code,
-            "ship_code" => $order->shipcode,
-            "recipient_name" => $order->recipient_name,
-            "recipient_email" => $order->recipient_email,
-            "recipient_phone" => $order->recipient_phone,
-            "recipient_address" => $order->recipient_address,
-            "total_amount" => (int) $order->total_amount,
-            "shipping_fee" => (int) $order->shipping_fee,
-            "tax_amount" => $order->tax_amount,
-            "discount_amount" => (int) $order->dicount_amount,
-            "final_amount" => (int) $order->final_amount,
-            "order_date" => $order->order_date,
-            "payment_date" => $order->payment_date,
-            "shipping_date" => $order->shipping_date,
-            "delivery_date" => $order->delivery_date,
-            "status" => $order->status,
-            "payment_method" => $order->payment_method,
-            "payment_status" => $order->payment_status,
-            "shipping_method" => $order->shipping_method,
-            "notes" => $order->note,
-            "created_at" => Carbon::parse($order->created_at)->format('d-m-Y H:i'),
-            "updated_at" => Carbon::parse($order->updated_at)->format('d-m-Y H:i'),
-            "logs" => data_get($order_ship, 'data.log'), // mảng ghi lại trạng thái đơn ship
-            "lead_time" => Carbon::parse($order_ship["data"]["leadtime"])->format('d-m-Y H:i'), //thời gian giao hàng dự kiến
-        ], 200);
     }
 
     /**
      * get orders by user
      */
-    public function getOrderByUser($user_id): JsonResponse
+    public function getOrderByUser(int $userId): JsonResponse
     {
+        try {
+            $orders = Order::where('user_id', $userId)->get();
 
-        $orders = Order::where('user_id', $user_id)->get();
-        if (!$orders) {
+            if ($orders->isEmpty()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Không tìm thấy danh sách đơn hàng',
+                    'data' => []
+                ], 404);
+            }
+
+            $result = $orders->map(function ($order) {
+                $orderShipResponse = $order->ship_code ? $this->getOrderDetail($order->order_code)->getData(true) : null;
+                if ($order->ship_code) {
+                    $updateResponse = $this->updateStatus($order->order_code);
+                    $order = data_get($updateResponse->getData(true), 'data');
+                }
+                return [
+                    'order' => $order,
+                    'logs' => data_get($orderShipResponse, 'data.log', []),
+                    'lead_time' => data_get($orderShipResponse, 'data.leadtime'),
+                ];
+            });
+
             return response()->json([
-                "message" => "Không tìm thấy danh sách đơn hàng"
-            ], 404);
+                'success' => true,
+                'message' => 'Lấy danh sách đơn hàng thành công',
+                'data' => $result
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('Error fetching orders by user', ['error' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Có lỗi xảy ra khi lấy danh sách đơn hàng',
+                'error' => $e->getMessage()
+            ], 500);
         }
-        $result = [];
-        foreach ($orders as $order) {
-            $order_ship = $this->getOrderDetail($order->order_code);
-
-            $result[] = [
-                'order' => $order,
-                'logs' => data_get($order_ship, 'data.log'),
-                'lead_time' => $order_ship['data']['leadtime'] ?? null,
-            ];
-        }
-
-        return response()->json([
-            "message" => "Lấy danh sách thành công",
-            'data' => $result
-        ], 200);
     }
 
     /**
      * admin xác nhận đơn hàng
      */
-    public function confirmOrder($order_code): JsonResponse
+    public function confirmOrder(string $orderCode): JsonResponse
     {
-        $order = Order::where('order_code', $order_code)->first();
-        if ($order->status == "paid") {
+        try {
+            $order = Order::where('order_code', $orderCode)->first();
+
+            if (!$order) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Không tìm thấy đơn hàng'
+                ], 404);
+            }
+
+            if ($order->status !== "paid") {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Đơn hàng không hợp lệ để xác nhận'
+                ], 400);
+            }
+
             $order->status = "confirmed";
             $order->save();
+
             return response()->json([
-                "message" => "Đã xác nhận đơn hàng",
+                'success' => true,
+                'message' => 'Đã xác nhận đơn hàng thành công'
             ], 200);
+        } catch (\Exception $e) {
+            Log::error('Error confirming order', ['error' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Có lỗi xảy ra khi xác nhận đơn hàng',
+                'error' => $e->getMessage()
+            ], 500);
         }
-        return response()->json([
-            "message" => "Đơn hàng không hợp lệ"
-        ], 404);
     }
 }

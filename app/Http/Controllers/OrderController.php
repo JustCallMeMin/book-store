@@ -38,14 +38,7 @@ class OrderController extends Controller
     public function getProvinces(Request $request): JsonResponse
     {
         try {
-            $provinces = $this->orderService->getProvinces();
-            return response()->json([
-                'status' => 200,
-                'data' => [
-                    'total_items' => $provinces['total_items'] ?? 0,
-                    'provinces' => $provinces ?? [],
-                ]
-            ]);
+            return $this->orderService->getProvinces();
         } catch (\Exception $e) {
             Log::error('Error getting provinces', [
                 'user_id' => auth()->id(),
@@ -59,20 +52,14 @@ class OrderController extends Controller
         }
     }
 
+
     /**
      * Lấy danh sách quận/huyện theo mã tỉnh/thành phố
      */
-    public function getDistricts(Request $request, $provinceId)
+    public function getDistricts(Request $request, $provinceId): JsonResponse
     {
         try {
-            $districts = $this->orderService->getDistricts($provinceId);
-            return response()->json([
-                'status' => true,
-                'data' => [
-                    'total_items' => $districts['total_items'] ?? 0,
-                    'districts' => $districts ?? [],
-                ]
-            ]);
+            return $this->orderService->getDistricts($provinceId);
         } catch (\Exception $e) {
             Log::error('Error getting districts', [
                 'user_id' => auth()->id(),
@@ -85,18 +72,14 @@ class OrderController extends Controller
             ], 500);
         }
     }
+
     /**
      * Lấy danh sách phường/xã theo mã quận/huyện
      */
     public function getWards(Request $request, int $districtId): JsonResponse
     {
         try {
-            $wards = $this->orderService->getWards($districtId);
-            return response()->json([
-                'success' => true,
-                'message' => 'Lấy danh sách phường/xã thành công',
-                'data' => $wards
-            ]);
+            return $this->orderService->getWards($districtId);
         } catch (\Exception $e) {
             Log::error('Error getting wards', [
                 'user_id' => auth()->id(),
@@ -109,6 +92,7 @@ class OrderController extends Controller
             ], 500);
         }
     }
+
 
 
 
@@ -125,29 +109,24 @@ class OrderController extends Controller
                     'message' => 'Giỏ hàng không tồn tại',
                 ], 404);
             }
-            if (!$cart['items']) {
+            if (empty($cart['items'])) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Chưa có sản phẩm',
                 ], 404);
             }
+
             $insurance_value = $cart['final_amount'] ?? 0;
             $result = $this->orderService->calculateDimensions($cart['items']);
-            $shippingFee = $this->orderService->calculateShippingFee($insurance_value, $to_ward_code, $to_district_id, $result['weight'], $result['length'], $result['width'], $result['height']);
-            $result = response()->json([
-                'success' => true,
-                'message' => 'Tính phí vận chuyển thành công',
-                'data' => [
-                    'shipping_fee' => $shippingFee,
-                ]
-            ]);
-            if ($shippingFee == null) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Có lỗi xảy ra khi tính phí vận chuyển',
-                ], 500);
-            }
-            return $result;
+            return $this->orderService->calculateShippingFee(
+                $insurance_value,
+                $to_ward_code,
+                $to_district_id,
+                $result['weight'],
+                $result['length'],
+                $result['width'],
+                $result['height']
+            );
         } catch (\Exception $e) {
             Log::error('Error calculating shipping fee', [
                 'user_id' => auth()->id(),
@@ -166,97 +145,29 @@ class OrderController extends Controller
      */
     public function sendOTP(Request $request): JsonResponse
     {
-        try {
-            $name = $request->input('name');
-            $phone = $request->input('phone');
-            $address = $request->input('address');
-            $ward = $request->input('ward');
-            $district = $request->input('district');
-            $province = $request->input('province');
+        $validatedData = $request->validate([
+            'name' => 'required|string',
+            'phone' => 'required|regex:/^0[3-9]\d{8}$/',
+            'address' => 'required|string',
+            'ward' => 'required|string',
+            'district' => 'required|string',
+            'province' => 'required|string',
+        ]);
 
-            $user = $request->user();
-            $to_email = $user['email'];
-            if (!preg_match("/^0[3-9]\d{8}$/", $phone)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Số điện thoại không hợp lệ',
-                ], 400);
-            }
-            $randomNumber = mt_rand(100000, 999999); // Tạo mã OTP ngẫu nhiên
-            Redis::set((string) "otp:" . $user['id'], $randomNumber); // Lưu mã OTP vào Redis 
-            Redis::expire((string) "otp:" . $phone, 300); // Đặt thời gian sống cho mã OTP là 5 phút
-            // Gửi email cho user...
-            $str_district = $address . ', ' . $ward . ', ' . $district . ', ' . $province;
-            Mail::to($to_email)->send(new OtpMail($name, $phone, $str_district, $randomNumber, $to_email));
-
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Mã OTP đã được gửi qua email của bạn thành công. Vui lòng kiểm tra email của bạn.',
-                'data' => [
-                    'email' => $to_email,
-                    'otp' => $randomNumber,
-                    'phone' => $phone,
-                ]
-            ]);
-        } catch (\Exception $e) {
-            Log::error('Error validating phone number', [
-                'user_id' => auth()->id(),
-                'error' => $e->getMessage()
-            ]);
-            return response()->json([
-                'success' => false,
-                'message' => 'Có lỗi xảy ra ',
-                'error' => $e->getMessage()
-            ], 500);
-        }
+        return $this->orderService->sendOtp($request->user(), $validatedData);
     }
+
     /**
      * Xác thực mã OTP
      */
     public function verifyOTP(Request $request): JsonResponse
     {
-        try {
-            $user = $request->user();
-            $otp = $request->input('otp');
-            // Kiểm tra OTP nhập vào hợp lệ
-            if (!$otp) {
-                throw new Error('otp is required');
-            }
-            // Lấy OTP từ Redis
-            $storedOtp = Redis::get('otp:' . $user['id']);
-            // Kiểm tra nếu OTP không tồn tại hoặc đã hết hạn
-
-            if (!$storedOtp) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Mã OTP đã hết hạn hoặc không tồn tại.',
-                ], 400);
-            }
-
-            // Kiểm tra nếu OTP nhập vào đúng
-            if ($otp == $storedOtp) {
-                // Xóa OTP khỏi Redis sau khi xác thực thành công
-                Redis::del('otp:' . $user['id']);
-
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Xác thực mã OTP thành công.',
-                ]);
-            }
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Mã OTP không đúng.',
-            ], 400);
-        } catch (\Exception $e) {
-            Log::error('Error verifying OTP', ['error' => $e->getMessage()]);
-            return response()->json([
-                'success' => false,
-                'message' => 'Có lỗi xảy ra khi xác thực mã OTP.',
-                'error' => $e->getMessage(),
-            ], 500);
+        $otp = $request->input('otp');
+        if (!$otp) {
+            return response()->json(['success' => false, 'message' => 'OTP không được để trống'], 400);
         }
+
+        return $this->orderService->verifyOtp($request->user(), $otp);
     }
 
     /**
@@ -291,6 +202,7 @@ class OrderController extends Controller
         $orderId = $orderCode . '_' . time();
         $amount = (int) $order->final_amount;
         $requestId = $orderCode . '_' . time();
+        $orderId = $orderCode . '_' . time();
         $orderInfo = "Thanh toán đơn hàng #$orderCode";
         $requestType = "captureWallet";
         $extraData = base64_encode(json_encode(['orderCode' => $orderCode]));
@@ -346,65 +258,10 @@ class OrderController extends Controller
     /**
      * Lấy thông tin đơn hàng momo trả về
      */
-    public function momoIpn(Request $request)
+    public function momoIpn(Request $request): JsonResponse
     {
-        $data = $request->all();
-
-        Log::info("MoMo IPN Received: ", $data);
-
-        // Kiểm tra chữ ký để đảm bảo an toàn
-        $signature = $data['signature'] ?? '';
-        $rawHash = "accessKey=" . env('MOMO_ACCESS_KEY') .
-            "&amount=" . $data['amount'] .
-            "&extraData=" . $data['extraData'] .
-            "&message=" . $data['message'] .
-            "&orderId=" . $data['orderId'] .
-            "&orderInfo=" . $data['orderInfo'] .
-            "&orderType=" . $data['orderType'] .
-            "&partnerCode=" . $data['partnerCode'] .
-            "&payType=" . $data['payType'] .
-            "&requestId=" . $data['requestId'] .
-            "&responseTime=" . $data['responseTime'] .
-            "&resultCode=" . $data['resultCode'] .
-            "&transId=" . $data['transId'];
-
-        $expectedSignature = hash_hmac('sha256', $rawHash, env('MOMO_SECRET_KEY'));
-
-        if ($signature !== $expectedSignature) {
-            Log::info("MoMo IPN Signature mismatch!");
-            return response()->json(['message' => 'Invalid signature'], 400);
-        }
-
-        // Cập nhật trạng thái đơn hàng
-        if ($data['resultCode'] == 0) {
-            // Thanh toán thành công
-            Log::info("MoMo IPN - Thành công cho đơn hàng: " . $data['orderId']);
-
-            // cập nhật order status trong DB tại đây
-            // Giải mã extraData
-            $extraData = json_decode(base64_decode($data['extraData']), true);
-            $orderCode = $extraData['orderCode'] ?? null;
-
-            // Tìm đơn hàng theo orderCode
-            $order = Order::where('order_code', $orderCode)->first();
-
-            if (!$order) {
-                Log::warning("MoMo IPN - Không tìm thấy đơn hàng: $orderCode");
-                return response()->json(['message' => 'Order not found'], 404);
-            }
-            $order->status = "paid";
-            $order->payment_status = "paid";
-            $order->payment_date = now();
-            $order->save();
-            Log::info('Cập nhật đơn hàng ' . $order->order_code . ' thành công');
-        } else {
-            Log::info("MoMo IPN - Giao dịch thất bại. Mã đơn: {$data['orderId']}, Lý do: {$data['message']}");
-        }
-
-        // Trả về HTTP 204 OK
-        return response()->json("", 204);
+        return $this->orderService->processIpn($request->all());
     }
-
 
 
     /**
@@ -515,26 +372,46 @@ class OrderController extends Controller
      */
     public function getOrderShipDetail(Request $request): JsonResponse
     {
-        $orderCode = $request->input('order_code');
+        try {
+            $orderCode = $request->input('order_code');
 
-        $result = $this->orderService->getOrderDetail($orderCode);
+            if (!$orderCode) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Mã đơn hàng không được để trống'
+                ], 400);
+            }
 
-        if ($result && isset($result['code']) && $result['code'] == 200) {
-            $status = $this->orderService->updateStatus($orderCode, $result['data']['log']);
+            $orderDetailResponse = $this->orderService->getOrderDetail($orderCode);
+            $orderDetail = $orderDetailResponse->getData(true);
+
+            if (!$orderDetail || !isset($orderDetail['code']) || $orderDetail['code'] !== 200) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $orderDetail['message'] ?? 'Không thể lấy thông tin đơn hàng',
+                    'data' => []
+                ], 404);
+            }
+
+            // Cập nhật trạng thái đơn hàng nếu có log dữ liệu
+            if (!empty($orderDetail['data']['log'])) {
+                $this->orderService->updateStatus($orderCode);
+            }
+
             return response()->json([
                 'success' => true,
                 'message' => 'Lấy chi tiết đơn hàng thành công',
-                'data' => $result['data']
-            ]);
+                'data' => $orderDetail['data']
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('Error fetching order details', ['error' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Có lỗi xảy ra khi lấy thông tin đơn hàng',
+                'error' => $e->getMessage()
+            ], 500);
         }
-
-        return response()->json([
-            'success' => false,
-            'message' => $result['message'] ?? 'Không thể lấy thông tin đơn hàng',
-            'data' => []
-        ]);
     }
-
     /**
      * Lấy Order theo order_code
      */
@@ -584,26 +461,45 @@ class OrderController extends Controller
         }
     }
 
-    /**
-     * Admin xác nhận đơn hàng
-     */
     public function confirmOrder(Request $request): JsonResponse
     {
-        $order_code = $request->input('order_code');
-        $result = $this->orderService->confirmOrder($order_code);
-        // return $result;
-        if ($result->status() == 200) {
-            $order_ship = $this->orderService->createOrderShip($order_code);
-            if ($order_ship['code'] == 200) {
+        try {
+            $orderCode = $request->input('order_code');
+
+            if (!$orderCode) {
                 return response()->json([
-                    "message" => "Đã tạo đơn giao hàng thành công",
-                    "data" => $order_ship
-                ]);
+                    'success' => false,
+                    'message' => 'Mã đơn hàng không được để trống'
+                ], 400);
             }
+
+            $result = $this->orderService->confirmOrder($orderCode);
+
+            if ($result->status() !== 200) {
+                return $result;
+            }
+
+            $orderShip = $this->orderService->createOrderShip($orderCode);
+
+            if (!isset($orderShip['code']) || $orderShip['code'] !== 200) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tạo đơn giao hàng thất bại'
+                ], 500);
+            }
+
             return response()->json([
-                "message" => "Tạo đơn giao hàng thất bại"
+                'success' => true,
+                'message' => 'Đã tạo đơn giao hàng thành công',
+                'data' => $orderShip
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('Error confirming order', ['error' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Có lỗi xảy ra khi xác nhận đơn hàng',
+                'error' => $e->getMessage()
             ], 500);
         }
-        return $result;
     }
 }

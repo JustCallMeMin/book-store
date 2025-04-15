@@ -138,9 +138,11 @@ Route::middleware('auth:api')->group(function () {
             'verified' // bỏ middleware nào đang chặn
         ]);
         Route::post('/add-order-ship', [OrderController::class, 'orderShip']);
-        Route::post('/detail-order-ship', [OrderController::class, 'getOrderShipDetail']);
-        Route::post('/get-order', [OrderController::class, 'getOrderByCode']);
-        Route::post('/get-orders', [OrderController::class, 'getOrderAll']);
+        Route::get('/detail-order-ship', [OrderController::class, 'getOrderShipDetail']);
+        Route::get('/get-order', [OrderController::class, 'getOrderByCode']);
+        Route::get('/get-orders', [OrderController::class, 'getOrderAll']);
+        Route::get('/orders-user', [OrderController::class, 'getOdersByUser']);
+        Route::post('/confirm-orders', [OrderController::class, 'confirmOrder']);
     });
 });
 

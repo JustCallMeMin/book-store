@@ -288,7 +288,7 @@ class OrderController extends Controller
         $secretKey = env('MOMO_SECRET_KEY');
         $redirectUrl = env('MOMO_REDIRECT_URL');
         $ipnUrl = env('MOMO_IPN_URL');
-
+        $orderId = $orderCode . '_' . time();
         $amount = (int) $order->final_amount;
         $requestId = $orderCode . '_' . time();
         $orderInfo = "Thanh toán đơn hàng #$orderCode";
@@ -296,7 +296,7 @@ class OrderController extends Controller
         $extraData = base64_encode(json_encode(['orderCode' => $orderCode]));
 
 
-        $rawHash = "accessKey={$accessKey}&amount={$amount}&extraData={$extraData}&ipnUrl={$ipnUrl}&orderId={$orderCode}&orderInfo={$orderInfo}&partnerCode={$partnerCode}&redirectUrl={$redirectUrl}&requestId={$requestId}&requestType={$requestType}";
+        $rawHash = "accessKey={$accessKey}&amount={$amount}&extraData={$extraData}&ipnUrl={$ipnUrl}&orderId={$orderId}&orderInfo={$orderInfo}&partnerCode={$partnerCode}&redirectUrl={$redirectUrl}&requestId={$requestId}&requestType={$requestType}";
         $signature = hash_hmac('sha256', $rawHash, $secretKey);
 
         $payload = [
@@ -304,7 +304,7 @@ class OrderController extends Controller
             'accessKey' => $accessKey,
             'requestId' => $requestId,
             'amount' => $amount,
-            'orderId' => $orderCode,
+            'orderId' => $orderId,
             'orderInfo' => $orderInfo,
             'redirectUrl' => $redirectUrl,
             'ipnUrl' => $ipnUrl,
@@ -397,7 +397,6 @@ class OrderController extends Controller
             $order->payment_date = now();
             $order->save();
             Log::info('Cập nhật đơn hàng ' . $order->order_code . ' thành công');
-
         } else {
             Log::info("MoMo IPN - Giao dịch thất bại. Mã đơn: {$data['orderId']}, Lý do: {$data['message']}");
         }
@@ -527,7 +526,6 @@ class OrderController extends Controller
                 'message' => 'Lấy chi tiết đơn hàng thành công',
                 'data' => $result['data']
             ]);
-
         }
 
         return response()->json([
@@ -584,7 +582,6 @@ class OrderController extends Controller
             Log::error("Lỗi khi lấy danh sách đơn hàng: " . $e);
             return response()->json(["error" => "Lỗi khi lấy danh sách đơn hàng: " . $e], 500);
         }
-
     }
 
     /**
@@ -595,19 +592,18 @@ class OrderController extends Controller
         $order_code = $request->input('order_code');
         $result = $this->orderService->confirmOrder($order_code);
         // return $result;
-        if($result->status()==200){
+        if ($result->status() == 200) {
             $order_ship = $this->orderService->createOrderShip($order_code);
-            if($order_ship['code'] == 200 ){
+            if ($order_ship['code'] == 200) {
                 return response()->json([
-                    "message"=>"Đã tạo đơn giao hàng thành công",
-                    "data"=>$order_ship
+                    "message" => "Đã tạo đơn giao hàng thành công",
+                    "data" => $order_ship
                 ]);
             }
             return response()->json([
-                "message"=>"Tạo đơn giao hàng thất bại"
-            ],500);
+                "message" => "Tạo đơn giao hàng thất bại"
+            ], 500);
         }
         return $result;
-
     }
 }

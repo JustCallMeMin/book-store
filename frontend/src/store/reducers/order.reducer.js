@@ -23,6 +23,9 @@ import {
     INITIATE_MOMO_PAYMENT_REQUEST,
     INITIATE_MOMO_PAYMENT_SUCCESS,
     INITIATE_MOMO_PAYMENT_FAILURE,
+    GET_USER_ORDERS_REQUEST,
+    GET_USER_ORDERS_SUCCESS,
+    GET_USER_ORDERS_FAILURE,
 } from "../actions/order/orderTypes";
 
 const initialState = {
@@ -43,11 +46,14 @@ const initialState = {
     orderData: null,
     initiatingMomoPayment: false,
     momoPayUrl: null,
+    userOrders: [],
+    loadingUserOrders: false,
     error: null,
     otpError: null,
     shippingFeeError: null,
     createOrderError: null,
     momoPaymentError: null,
+    userOrdersError: null,
 };
 
 const orderReducer = (state = initialState, action) => {
@@ -181,6 +187,20 @@ const orderReducer = (state = initialState, action) => {
                 ...state,
                 initiatingMomoPayment: false,
                 momoPaymentError: action.payload,
+            };
+        case GET_USER_ORDERS_REQUEST:
+            return { ...state, loadingUserOrders: true, userOrdersError: null };
+        case GET_USER_ORDERS_SUCCESS:
+            return {
+                ...state,
+                loadingUserOrders: false,
+                userOrders: action.payload,
+            };
+        case GET_USER_ORDERS_FAILURE:
+            return {
+                ...state,
+                loadingUserOrders: false,
+                userOrdersError: action.payload,
             };
         default:
             return state;

@@ -19,6 +19,7 @@ import AuthorManagement from "./admin/pages/AuthorManagement";
 import PublisherManagement from "./admin/pages/PublisherManagement";
 import AdminProfile from "./admin/pages/AdminProfile";
 import BookManagement from "./admin/pages/BookManagement";
+import MyOrders from "./pages/MyOrders";
 const user = JSON.parse(sessionStorage.getItem("user") || "{}");
 const accessAdminRoles = ["Admin"];
 function App() {
@@ -35,6 +36,7 @@ function App() {
                         <Route path="profile" element={<ProfilePage />} />
                         <Route path="book/:id" element={<BookDetail />} />
                         <Route path="checkout" element={<Checkout />} />
+                        <Route path="myOrders" element={<MyOrders />} />
                     </Route>
                     <Route
                         path="/accessDenied"

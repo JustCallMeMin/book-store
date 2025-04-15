@@ -24,6 +24,9 @@ import {
     INITIATE_MOMO_PAYMENT_REQUEST,
     INITIATE_MOMO_PAYMENT_SUCCESS,
     INITIATE_MOMO_PAYMENT_FAILURE,
+    GET_USER_ORDERS_REQUEST,
+    GET_USER_ORDERS_SUCCESS,
+    GET_USER_ORDERS_FAILURE,
 } from "./orderTypes";
 
 const BASE_URL = process.env.REACT_APP_API_BASE_URL;
@@ -275,5 +278,36 @@ export const initiateMomoPayment = (orderCode) => async (dispatch) => {
         }
     } catch (e) {
         handleApiError(dispatch, initiateMomoPaymentFailure, e);
+    }
+};
+
+const getUserOrdersRequest = () => ({ type: GET_USER_ORDERS_REQUEST });
+const getUserOrdersSuccess = (orders) => ({
+    type: GET_USER_ORDERS_SUCCESS,
+    payload: orders,
+});
+const getUserOrdersFailure = (error) => ({
+    type: GET_USER_ORDERS_FAILURE,
+    payload: error,
+});
+
+export const getUserOrders = () => async (dispatch) => {
+    dispatch(getUserOrdersRequest());
+    const apiUrl = BASE_URL + "orders/orders-user";
+    try {
+        const res = await customAxios.get(apiUrl, {
+            withCredentials: true,
+        });
+        if (res.status === 200) {
+            dispatch(getUserOrdersSuccess(res.data.data));
+        } else {
+            dispatch(
+                getUserOrdersFailure(
+                    res.data.message || "Failed to fetch user orders"
+                )
+            );
+        }
+    } catch (e) {
+        handleApiError(dispatch, getUserOrdersFailure, e);
     }
 };

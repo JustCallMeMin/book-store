@@ -339,6 +339,9 @@ class OrderService
         if (!$order) {
             return null;
         }
+        if (!$order->ship_code) {
+            return null;
+        }
         $headers = [
             "Content-Type: application/json",
             "Token: " . env('GHN_API_TOKEN'),
@@ -353,14 +356,15 @@ class OrderService
         ];
 
         $context = stream_context_create($options);
+        Log::info('GHN Request Data', $data);
         $response = file_get_contents($url, false, $context);
 
 
 
-        $data = json_decode($response, true); // Chuyển JSON string thành mảng
+        $result = json_decode($response, true); // Chuyển JSON string thành mảng
 
-        if (isset($data['code']) && $data['code'] == 200) {
-            return collect($data)->toArray(); // Trả về chi tiết đơn hàng
+        if (isset($result['code']) && $result['code'] == 200) {
+            return collect($result)->toArray(); // Trả về chi tiết đơn hàng
         }
 
         return null;
@@ -483,7 +487,7 @@ class OrderService
 
             $result[] = [
                 'order' => $order,
-                'logs' =>data_get($order_ship, 'data.log'),
+                'logs' => data_get($order_ship, 'data.log'),
                 'lead_time' => $order_ship['data']['leadtime'] ?? null,
             ];
         }

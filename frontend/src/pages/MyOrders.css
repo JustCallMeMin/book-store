@@ -1,0 +1,99 @@
+.my-orders-page {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.orders-table th,
+.orders-table td {
+    vertical-align: middle;
+    padding: 12px;
+}
+
+.orders-table th {
+    font-weight: 600;
+    color: #333;
+}
+
+.orders-table td {
+    color: #555;
+}
+
+.orders-table tr:hover {
+    background-color: #f8f9fa;
+}
+
+.text-primary {
+    color: #007bff !important;
+}
+
+.card {
+    border-radius: 8px;
+}
+
+.btn-outline-primary {
+    border-radius: 4px;
+    padding: 5px 10px;
+}
+
+.btn-primary {
+    border-radius: 4px;
+    padding: 5px 10px;
+}
+
+.order-timeline {
+    position: relative;
+    padding-left: 30px;
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 20px;
+}
+
+.timeline-dot {
+    position: absolute;
+    left: -25px;
+    top: 5px;
+    width: 12px;
+    height: 12px;
+    background-color: #007bff;
+    border-radius: 50%;
+}
+
+.timeline-item:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    left: -20px;
+    top: 17px;
+    width: 2px;
+    height: calc(100% - 12px);
+    background-color: #dee2e6;
+}
+
+.timeline-content {
+    background-color: #f8f9fa;
+    padding: 10px;
+    border-radius: 4px;
+}
+
+.timeline-status {
+    font-weight: 600;
+    margin-bottom: 5px;
+}
+
+.timeline-date {
+    color: #6c757d;
+    font-size: 0.9em;
+    margin-bottom: 5px;
+}
+
+.timeline-action {
+    color: #495057;
+    font-size: 0.9em;
+    margin-bottom: 0;
+}
+
+.modal-body .list-group-item {
+    padding: 8px 0;
+    border: none;
+}

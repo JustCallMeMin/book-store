@@ -17,6 +17,11 @@ class AccountMenu extends Component {
         navigate("/profile");
     };
 
+    handleMyOrders = () => {
+        const { navigate } = this.props;
+        navigate("/myOrders");
+    };
+
     render() {
         const { user } = this.props;
         console.log("User in AccountMenu:", user);
@@ -35,6 +40,10 @@ class AccountMenu extends Component {
                 <Dropdown.Menu>
                     <Dropdown.Item onClick={this.handleProfile}>
                         Thông tin cá nhân
+                    </Dropdown.Item>
+                    <Dropdown.Divider />
+                    <Dropdown.Item onClick={this.handleMyOrders}>
+                        Đơn hàng của tôi
                     </Dropdown.Item>
                     <Dropdown.Divider />
                     <Dropdown.Item onClick={this.handleLogout}>

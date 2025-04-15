@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Models\Cart;
 use App\Models\OrderItem;
+use Illuminate\Http\Client\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
@@ -411,13 +412,14 @@ class OrderService
 
             $result[] = [
                 'order' => $order,
-                'logs' => $order_ship['log'] ?? null,
-                'lead_time' => $order_ship['leadtime'] ?? null,
+                'logs' => $order_ship['data']['log'] ?? null,
+                'lead_time' => $order_ship['data']['leadtime'] ?? null,
             ];
         }
 
         return response()->json([
-            'orders' => $result
+            "message" => "Lấy danh sách thành công",
+            'data' => $result
         ], 200);
     }
 
@@ -457,12 +459,57 @@ class OrderService
             "payment_status" => $order->payment_status,
             "shipping_method" => $order->shipping_method,
             "notes" => $order->note,
-            "created_at" =>  Carbon::parse($order->created_at)->format('d-m-Y H:i'),
-            "updated_at" =>  Carbon::parse($order->updated_at)->format('d-m-Y H:i'),
+            "created_at" => Carbon::parse($order->created_at)->format('d-m-Y H:i'),
+            "updated_at" => Carbon::parse($order->updated_at)->format('d-m-Y H:i'),
             "logs" => $order_ship["data"]["log"], // mảng ghi lại trạng thái đơn ship
-            "lead_time" =>  Carbon::parse($order_ship["data"]["leadtime"])->format('d-m-Y H:i'), //thời gian giao hàng dự kiến
+            "lead_time" => Carbon::parse($order_ship["data"]["leadtime"])->format('d-m-Y H:i'), //thời gian giao hàng dự kiến
         ], 200);
     }
 
+    /**
+     * get orders by user
+     */
+    public function getOrderByUser($user_id): JsonResponse
+    {
 
+        $orders = Order::where('user_id', $user_id)->get();
+        if (!$orders) {
+            return response()->json([
+                "message" => "Không tìm thấy danh sách đơn hàng"
+            ], 404);
+        }
+        $result = [];
+        foreach ($orders as $order) {
+            $order_ship = $this->getOrderDetail($order->order_code);
+
+            $result[] = [
+                'order' => $order,
+                'logs' => $order_ship['data']['log'] ?? null,
+                'lead_time' => $order_ship['data']['leadtime'] ?? null,
+            ];
+        }
+
+        return response()->json([
+            "message" => "Lấy danh sách thành công",
+            'data' => $result
+        ], 200);
+    }
+
+    /**
+     * admin xác nhận đơn hàng
+     */
+    public function confirmOrder($order_code): JsonResponse
+    {
+        $order = Order::where('order_code', $order_code)->first();
+        if ($order->status == "paid") {
+            $order->status = "confirmed";
+            $order->save();
+            return response()->json([
+                "message" => "Đã xác nhận đơn hàng",
+            ], 200);
+        }
+        return response()->json([
+            "message"=>"Đơn hàng không hợp lệ"
+        ],404);
+    }
 }

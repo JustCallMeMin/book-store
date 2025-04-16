@@ -502,4 +502,22 @@ class OrderController extends Controller
             ], 500);
         }
     }
+
+    public function cancelOrder(Request $request) : JsonResponse 
+    {
+        try{
+            $request->validate(["order_code"=>"required|string"]);
+            $order_code= $request->input('order_code');
+            return $this->orderService->cancelOrder($order_code);
+        }
+        catch(\Exception $e){
+            Log::error('Error cancelling order', ['error' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Có lỗi xảy ra khi hủy đơn hàng',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+
+    }
 }

@@ -22,6 +22,8 @@ use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Js;
 use Laravel\Pail\ValueObjects\Origin\Console;
 
+use function PHPSTORM_META\map;
+
 class OrderService
 {
     /**
@@ -620,7 +622,8 @@ class OrderService
     public function getOrders(): JsonResponse
     {
         try {
-            $orders = Order::all();
+            $orders = Order::orderByDesc('order_date')->get();
+
             if ($orders->isEmpty()) {
                 return response()->json([
                     'success' => false,
@@ -635,8 +638,10 @@ class OrderService
                     $updateResponse = $this->updateStatus($order->order_code);
                     $updatedOrder = data_get($updateResponse->getData(true), 'data');
                 }
+                $orderData = $updatedOrder ?? $order;
+                $orderData['items'] = data_get($this->getItems($order->id)->getData(true), 'data');
                 return [
-                    'order' => $updatedOrder ?? $order,
+                    'order' => $orderData,
                     'logs' => data_get($order_ship, 'data.log', []),
                     'lead_time' => data_get($order_ship, 'data.leadtime'),
                 ];
@@ -670,10 +675,11 @@ class OrderService
                     'message' => 'Không tìm thấy đơn hàng'
                 ], 404);
             }
+            $items = $this->getItems($order->id)->getData(true);
             if (!$order->ship_code) {
                 return response()->json([
                     'success' => true,
-                    'data' => $order,
+                    'data' => ['order' => $order, 'items' => $items],
                     'message' => 'Lấy đơn hàng thành công'
                 ], 200);
             }
@@ -681,7 +687,7 @@ class OrderService
             $updatedOrder = data_get($updateResponse->getData(true), 'data');
 
             // Lấy thông tin vận chuyển nếu có mã vận chuyển
-            $orderShipResponse = $order->ship_code ? $this->getOrderDetail($orderCode)->getData(true) : null;
+            $orderShipResponse = $updatedOrder->ship_code ? $this->getOrderDetail($orderCode)->getData(true) : null;
 
             if (!$orderShipResponse) {
                 return response()->json([
@@ -711,9 +717,9 @@ class OrderService
                     "payment_date" => $order->payment_date,
                     "shipping_date" => $order->shipping_date,
                     "delivery_date" => $order->delivery_date,
-                    "status" => $order->status,
+                    "status" => $updatedOrder->status,
                     "payment_method" => $order->payment_method,
-                    "payment_status" => $order->payment_status,
+                    "payment_status" => $updatedOrder->payment_status,
                     "shipping_method" => $order->shipping_method,
                     "notes" => $order->note,
                     "created_at" => Carbon::parse($order->created_at)->format('d-m-Y H:i'),
@@ -738,7 +744,9 @@ class OrderService
     public function getOrderByUser($userId): JsonResponse
     {
         try {
-            $orders = Order::where('user_id', $userId)->get();
+            $orders = Order::where('user_id', $userId)
+                ->orderByDesc('order_date')
+                ->get();
 
             if ($orders->isEmpty()) {
                 return response()->json([
@@ -754,8 +762,10 @@ class OrderService
                     $updateResponse = $this->updateStatus($order->order_code);
                     $updatedOrder = data_get($updateResponse->getData(true), 'data');
                 }
+                $orderData = $updatedOrder ?? $order;
+                $orderData['items'] = data_get($this->getItems($order->id)->getData(true), 'data');
                 return [
-                    'order' => $updatedOrder ?? $order,
+                    'order' => $orderData,
                     'logs' => data_get($orderShipResponse, 'data.log', []),
                     'lead_time' => data_get($orderShipResponse, 'data.leadtime'),
                 ];
@@ -814,4 +824,121 @@ class OrderService
             ], 500);
         }
     }
+
+    /**
+     * Hủy đơn hàng
+     */
+    public function cancelOrder($order_code)
+    {
+        try {
+            $order = Order::where('order_code', $order_code)->first();
+            if (!$order) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Không tìm thấy đơn hàng",
+                ], 404);
+            }
+            if ($order->payment_status != "pending") {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Hủy đơn hàng thất bại! Không thể hủy đơn hàng đã thanh toán",
+                ], 409);
+            }
+            $order->status = "cancelled";
+            $order->payment_status = "cancelled";
+            $order->save();
+            return response()->json([
+                'success' => true,
+                'message' => "Hủy đơn hàng thành công",
+                'data' => $order,
+            ], 200);
+
+        } catch (\Exception $e) {
+            Log::error('Error cancelling order', ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'message' => 'Có lỗi xảy ra khi hủy đơn hàng', 'error' => $e->getMessage()], 500);
+        }
+
+
+    }
+
+    // /**
+    //  * Gọi api hủy đơn ship GHN
+    //  */
+    // public function cancelOrderShip($order_ship): JsonResponse
+    // {
+    //     try {
+    //         $url = 'https://dev-online-gateway.ghn.vn/shiip/public-api/v2/switch-status/cancel';
+
+    //         $headers = [
+    //             "Content-Type: application/json",
+    //             "Token: " . env('GHN_API_TOKEN'),
+    //             "ShopId: " . env('GHN_SHOP_ID'),
+    //         ];
+    //         $data = ["order_code" => $order_ship];
+
+    //         $options = [
+    //             'http' => [
+    //                 'method' => 'POST',
+    //                 'header' => implode("\r\n", $headers),
+    //                 'content' => json_encode($data),
+    //             ]
+    //         ];
+
+    //         $context = stream_context_create($options);
+    //         $response = file_get_contents($url, false, $context);
+    //         $data = json_decode($response, true);
+
+    //         if (!isset($data['code']) || $data['code'] != 200) {
+    //             throw new \Exception('Dữ liệu phản hồi không hợp lệ');
+    //         }
+
+    //         return response()->json(['success' => true, 'data' => $data['data']], 200);
+    //     } catch (\Exception $e) {
+    //         Log::error('Error getting order details', ['error' => $e->getMessage()]);
+    //         return response()->json(['success' => false, 'message' => 'Có lỗi xảy ra khi lấy chi tiết đơn hàng', 'error' => $e->getMessage()], 500);
+    //     }
+    // }
+
+    /**
+     * Lấy danh sách items theo order_id
+     */
+    public function getItems($order_id): JsonResponse
+    {
+        try {
+            $items = OrderItem::where("order_id", $order_id)->get();
+            if (!$items) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Không tìm thấy danh sách sách trong đơn hàng'
+                ], 404);
+            }
+            $result = $items->map(function ($item) {
+                $book = Book::where("id", $item->book_id)->first();
+                return [
+                    'id' => $item->id,
+                    'order_id' => $item->order_id,
+                    'quantity' => $item->quantity,
+                    'book' => $book ?? null,
+                    'unit_price' => $item->unit_price,
+                    'discount_amount' => $item->discount_amount,
+                    'final_price' => $item->final_price,
+                    'notes' => $item->notes,
+                ];
+            });
+            return response()->json([
+                'sucess' => true,
+                'message' => "Lấy danh sách sách trong đơn hàng thành công",
+                'data' => $result
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error get order_items', ['error' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Có lỗi xảy ra khi lấy danh sách sách trong đơn hàng ',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
 }

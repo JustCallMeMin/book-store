@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\PublisherController;
 use App\Http\Controllers\CartController;
+use App\Http\Controllers\Controller;
 use App\Http\Controllers\OrderController;
 
 // Redirect old Google OAuth routes to new web routes
@@ -77,6 +78,7 @@ Route::middleware('auth:api')->group(function () {
             Route::delete('/{id}', [PermissionController::class, 'destroy'])->middleware('requires.permission:permissions:manage');
             Route::post('/assign', [PermissionController::class, 'assignToRole'])->middleware('requires.permission:permissions:manage');
             Route::get('/roles/{roleId}', [PermissionController::class, 'getRolePermissions'])->middleware('requires.permission:permissions:manage');
+
         });
 
         // Quản lý người dùng
@@ -140,9 +142,10 @@ Route::middleware('auth:api')->group(function () {
         Route::post('/add-order-ship', [OrderController::class, 'orderShip']);
         Route::get('/detail-order-ship', [OrderController::class, 'getOrderShipDetail']);
         Route::get('/get-order', [OrderController::class, 'getOrderByCode']);
-        Route::get('/get-orders', [OrderController::class, 'getOrderAll']);
+        Route::get('/get-orders', [OrderController::class, 'getOrderAll'])->middleware('role:admin');
         Route::get('/orders-user', [OrderController::class, 'getOdersByUser']);
-        Route::post('/confirm-orders', [OrderController::class, 'confirmOrder']);
+        Route::post('/confirm-orders', [OrderController::class, 'confirmOrder'])->middleware('role:admin');
+        Route::post("/cancel-order",[OrderController::class,'cancelOrder']);
     });
 });
 

@@ -26,6 +26,12 @@ import {
     GET_USER_ORDERS_REQUEST,
     GET_USER_ORDERS_SUCCESS,
     GET_USER_ORDERS_FAILURE,
+    GET_ORDERS_REQUEST,
+    GET_ORDERS_SUCCESS,
+    GET_ORDERS_FAILURE,
+    CONFIRM_ORDER_REQUEST,
+    CONFIRM_ORDER_SUCCESS,
+    CONFIRM_ORDER_FAILURE,
 } from "../actions/order/orderTypes";
 
 const initialState = {
@@ -48,12 +54,18 @@ const initialState = {
     momoPayUrl: null,
     userOrders: [],
     loadingUserOrders: false,
+    orders: [],
+    loadingOrders: false,
+    confirmingOrder: false,
+    orderConfirmed: false,
     error: null,
     otpError: null,
     shippingFeeError: null,
     createOrderError: null,
     momoPaymentError: null,
     userOrdersError: null,
+    ordersError: null,
+    confirmOrderError: null,
 };
 
 const orderReducer = (state = initialState, action) => {
@@ -201,6 +213,40 @@ const orderReducer = (state = initialState, action) => {
                 ...state,
                 loadingUserOrders: false,
                 userOrdersError: action.payload,
+            };
+        case GET_ORDERS_REQUEST:
+            return { ...state, loadingOrders: true, ordersError: null };
+        case GET_ORDERS_SUCCESS:
+            return {
+                ...state,
+                loadingOrders: false,
+                orders: action.payload,
+            };
+        case GET_ORDERS_FAILURE:
+            return {
+                ...state,
+                loadingOrders: false,
+                ordersError: action.payload,
+            };
+        case CONFIRM_ORDER_REQUEST:
+            return {
+                ...state,
+                confirmingOrder: true,
+                confirmOrderError: null,
+                orderConfirmed: false,
+            };
+        case CONFIRM_ORDER_SUCCESS:
+            return {
+                ...state,
+                confirmingOrder: false,
+                orderConfirmed: true,
+            };
+        case CONFIRM_ORDER_FAILURE:
+            return {
+                ...state,
+                confirmingOrder: false,
+                confirmOrderError: action.payload,
+                orderConfirmed: false,
             };
         default:
             return state;

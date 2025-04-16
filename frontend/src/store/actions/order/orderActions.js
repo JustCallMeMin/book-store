@@ -27,6 +27,12 @@ import {
     GET_USER_ORDERS_REQUEST,
     GET_USER_ORDERS_SUCCESS,
     GET_USER_ORDERS_FAILURE,
+    GET_ORDERS_REQUEST,
+    GET_ORDERS_SUCCESS,
+    GET_ORDERS_FAILURE,
+    CONFIRM_ORDER_REQUEST,
+    CONFIRM_ORDER_SUCCESS,
+    CONFIRM_ORDER_FAILURE,
 } from "./orderTypes";
 
 const BASE_URL = process.env.REACT_APP_API_BASE_URL;
@@ -309,5 +315,68 @@ export const getUserOrders = () => async (dispatch) => {
         }
     } catch (e) {
         handleApiError(dispatch, getUserOrdersFailure, e);
+    }
+};
+
+const getOrdersRequest = () => ({ type: GET_ORDERS_REQUEST });
+const getOrdersSuccess = (orders) => ({
+    type: GET_ORDERS_SUCCESS,
+    payload: orders,
+});
+const getOrdersFailure = (error) => ({
+    type: GET_ORDERS_FAILURE,
+    payload: error,
+});
+
+export const getOrders = () => async (dispatch) => {
+    dispatch(getOrdersRequest());
+    const apiUrl = BASE_URL + "orders/get-orders";
+    try {
+        const res = await customAxios.get(apiUrl, {
+            withCredentials: true,
+        });
+        if (res.status === 200) {
+            dispatch(getOrdersSuccess(res.data.data));
+        } else {
+            dispatch(
+                getOrdersFailure(res.data.message || "Failed to fetch orders")
+            );
+        }
+    } catch (e) {
+        handleApiError(dispatch, getOrdersFailure, e);
+    }
+};
+
+const confirmOrderRequest = () => ({ type: CONFIRM_ORDER_REQUEST });
+const confirmOrderSuccess = () => ({
+    type: CONFIRM_ORDER_SUCCESS,
+});
+const confirmOrderFailure = (error) => ({
+    type: CONFIRM_ORDER_FAILURE,
+    payload: error,
+});
+
+export const confirmOrder = (orderCode) => async (dispatch) => {
+    dispatch(confirmOrderRequest());
+    const apiUrl = BASE_URL + "orders/confirm-orders";
+    try {
+        const res = await customAxios.post(
+            apiUrl,
+            { order_code: orderCode },
+            {
+                withCredentials: true,
+            }
+        );
+        if (res.status === 200 || res.status === 201) {
+            dispatch(confirmOrderSuccess());
+        } else {
+            dispatch(
+                confirmOrderFailure(
+                    res.data.message || "Failed to confirm order"
+                )
+            );
+        }
+    } catch (e) {
+        handleApiError(dispatch, confirmOrderFailure, e);
     }
 };

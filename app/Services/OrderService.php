@@ -86,7 +86,7 @@ class OrderService
 
     /**
      * API Lấy mã Quận/Huyện theo mã Tỉnh/Thành phố
-     * @param int $provinceId
+     * @param  $provinceId
      * @return JsonResponse
      */
     public function getDistricts($provinceId): JsonResponse
@@ -148,10 +148,10 @@ class OrderService
 
     /**
      * API Lấy mã Phường/Xã theo mã Quận/Huyện
-     * @param int $districtId
+     * @param  $districtId
      * @return JsonResponse
      */
-    public function getWards(int $districtId): JsonResponse
+    public function getWards($districtId): JsonResponse
     {
         try {
             $url = 'https://dev-online-gateway.ghn.vn/shiip/public-api/master-data/ward?district_id=' . $districtId;
@@ -277,9 +277,9 @@ class OrderService
 
     /**
      * tìm kiếm đơn hàng theo mã đơn hàng
-     * @param string $orderCode
+     * @param  $orderCode
      */
-    public function findOrderByCode(string $orderCode): ?Order
+    public function findOrderByCode($orderCode): ?Order
     {
         return Order::where('order_code', $orderCode)->first();
     }
@@ -287,7 +287,7 @@ class OrderService
     /**
      * Cập nhật trạng thái đã thanh toán
      */
-    public function updateStatusPaid(string $orderCode)
+    public function updateStatusPaid($orderCode)
     {
         return Order::where('order_code', $orderCode)
             ->update([
@@ -531,7 +531,7 @@ class OrderService
     /**
      * Lấy chi tiết đơn ship
      */
-    public function getOrderDetail(string $orderCode): JsonResponse
+    public function getOrderDetail($orderCode): JsonResponse
     {
         try {
             $url = 'https://dev-online-gateway.ghn.vn/shiip/public-api/v2/shipping-order/detail';
@@ -574,7 +574,7 @@ class OrderService
     /**
      * Cập nhật trạng thái vận chuyển
      */
-    public function updateStatus(string $orderCode): JsonResponse
+    public function updateStatus($orderCode): JsonResponse
     {
         try {
             // Lấy chi tiết đơn hàng để lấy logs
@@ -636,7 +636,7 @@ class OrderService
                     $updatedOrder = data_get($updateResponse->getData(true), 'data');
                 }
                 return [
-                    'order' => $updatedOrder,
+                    'order' => $updatedOrder ?? $order,
                     'logs' => data_get($order_ship, 'data.log', []),
                     'lead_time' => data_get($order_ship, 'data.leadtime'),
                 ];
@@ -660,20 +660,25 @@ class OrderService
     /**
      * Lấy Order theo order_code
      */
-    public function getOrderByCode(string $orderCode): JsonResponse
+    public function getOrderByCode($orderCode): JsonResponse
     {
         try {
             $order = Order::where('order_code', $orderCode)->first();
-            if ($order->ship_code) {
-                $updateResponse = $this->updateStatus($order->order_code);
-                $order = data_get($updateResponse->getData(true), 'data');
-            }
             if (!$order) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Không tìm thấy đơn hàng'
                 ], 404);
             }
+            if (!$order->ship_code) {
+                return response()->json([
+                    'success' => true,
+                    'data' => $order,
+                    'message' => 'Lấy đơn hàng thành công'
+                ], 200);
+            }
+            $updateResponse = $this->updateStatus($order->order_code);
+            $updatedOrder = data_get($updateResponse->getData(true), 'data');
 
             // Lấy thông tin vận chuyển nếu có mã vận chuyển
             $orderShipResponse = $order->ship_code ? $this->getOrderDetail($orderCode)->getData(true) : null;
@@ -730,7 +735,7 @@ class OrderService
     /**
      * get orders by user
      */
-    public function getOrderByUser(int $userId): JsonResponse
+    public function getOrderByUser($userId): JsonResponse
     {
         try {
             $orders = Order::where('user_id', $userId)->get();
@@ -745,12 +750,12 @@ class OrderService
 
             $result = $orders->map(function ($order) {
                 $orderShipResponse = $order->ship_code ? $this->getOrderDetail($order->order_code)->getData(true) : null;
-                if ($order->ship_code) {
+                if ($order->ship_code != null) {
                     $updateResponse = $this->updateStatus($order->order_code);
-                    $order = data_get($updateResponse->getData(true), 'data');
+                    $updatedOrder = data_get($updateResponse->getData(true), 'data');
                 }
                 return [
-                    'order' => $order,
+                    'order' => $updatedOrder ?? $order,
                     'logs' => data_get($orderShipResponse, 'data.log', []),
                     'lead_time' => data_get($orderShipResponse, 'data.leadtime'),
                 ];
@@ -774,7 +779,7 @@ class OrderService
     /**
      * admin xác nhận đơn hàng
      */
-    public function confirmOrder(string $orderCode): JsonResponse
+    public function confirmOrder($orderCode): JsonResponse
     {
         try {
             $order = Order::where('order_code', $orderCode)->first();

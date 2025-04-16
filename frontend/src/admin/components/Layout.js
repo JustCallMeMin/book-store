@@ -17,6 +17,7 @@ import { getPermissionsFromApi } from "../../store/actions/user/userActions";
 import { parsePermissionsForPage } from "../utils/permissionHelper";
 import "../styles/admin.css";
 import withNavigate from "src/store/HOC/withNavigate";
+import { FaJediOrder } from "react-icons/fa";
 
 const { Content } = AntLayout;
 
@@ -179,83 +180,94 @@ class MainLayout extends Component {
                       },
                   ]
                 : []),
-            {
-                key: "10",
-                icon: <OrderedListOutlined />,
-                label: "Quản lý đơn hàng",
-                children: [
-                    // ...(classPerm.access
-                    //     ? [
-                    //           {
-                    //               key: "4",
-                    //               label: (
-                    //                   <Link to="/admin/classes/list">
-                    //                       Quản lý lớp học
-                    //                   </Link>
-                    //               ),
-                    //           },
-                    //       ]
-                    //     : []),
-                    // ...(mentorPerm.access
-                    //     ? [
-                    //           {
-                    //               key: "5",
-                    //               label: (
-                    //                   <Link to="/admin/mentors">
-                    //                       Quản lý giáo viên
-                    //                   </Link>
-                    //               ),
-                    //           },
-                    //       ]
-                    //     : []),
-                    // ...(studentPerm.access
-                    //     ? [
-                    //           {
-                    //               key: "6",
-                    //               label: (
-                    //                   <Link to="/admin/students">
-                    //                       Quản lý học viên
-                    //                   </Link>
-                    //               ),
-                    //           },
-                    //       ]
-                    //     : []),
-                    // ...(coursePerm.access || subjectPerm.access
-                    //     ? [
-                    //           {
-                    //               key: "7",
-                    //               label: "Quản lý khoá học",
-                    //               children: [
-                    //                   ...(coursePerm.access
-                    //                       ? [
-                    //                             {
-                    //                                 key: "8",
-                    //                                 label: (
-                    //                                     <Link to="/admin/courses">
-                    //                                         Quản lý khoá học
-                    //                                     </Link>
-                    //                                 ),
-                    //                             },
-                    //                         ]
-                    //                       : []),
-                    //                   ...(subjectPerm.access
-                    //                       ? [
-                    //                             {
-                    //                                 key: "9",
-                    //                                 label: (
-                    //                                     <Link to="/admin/subjects">
-                    //                                         Quản lý bộ môn
-                    //                                     </Link>
-                    //                                 ),
-                    //                             },
-                    //                         ]
-                    //                       : []),
-                    //               ],
-                    //           },
-                    //       ]
-                    //     : []),
-                ],
-            },
+            ...(bookPerm.access
+                ? [
+                      {
+                          key: "6",
+                          icon: <OrderedListOutlined />,
+                          label: (
+                              <Link to="/admin/orders">Quản lý đơn hàng</Link>
+                          ),
+                      },
+                  ]
+                : []),
+            // {
+            //     key: "10",
+            //     icon: <OrderedListOutlined />,
+            //     label: "Quản lý đơn hàng",
+            //     children: [
+            //         // ...(classPerm.access
+            //         //     ? [
+            //         //           {
+            //         //               key: "4",
+            //         //               label: (
+            //         //                   <Link to="/admin/classes/list">
+            //         //                       Quản lý lớp học
+            //         //                   </Link>
+            //         //               ),
+            //         //           },
+            //         //       ]
+            //         //     : []),
+            //         // ...(mentorPerm.access
+            //         //     ? [
+            //         //           {
+            //         //               key: "5",
+            //         //               label: (
+            //         //                   <Link to="/admin/mentors">
+            //         //                       Quản lý giáo viên
+            //         //                   </Link>
+            //         //               ),
+            //         //           },
+            //         //       ]
+            //         //     : []),
+            //         // ...(studentPerm.access
+            //         //     ? [
+            //         //           {
+            //         //               key: "6",
+            //         //               label: (
+            //         //                   <Link to="/admin/students">
+            //         //                       Quản lý học viên
+            //         //                   </Link>
+            //         //               ),
+            //         //           },
+            //         //       ]
+            //         //     : []),
+            //         // ...(coursePerm.access || subjectPerm.access
+            //         //     ? [
+            //         //           {
+            //         //               key: "7",
+            //         //               label: "Quản lý khoá học",
+            //         //               children: [
+            //         //                   ...(coursePerm.access
+            //         //                       ? [
+            //         //                             {
+            //         //                                 key: "8",
+            //         //                                 label: (
+            //         //                                     <Link to="/admin/courses">
+            //         //                                         Quản lý khoá học
+            //         //                                     </Link>
+            //         //                                 ),
+            //         //                             },
+            //         //                         ]
+            //         //                       : []),
+            //         //                   ...(subjectPerm.access
+            //         //                       ? [
+            //         //                             {
+            //         //                                 key: "9",
+            //         //                                 label: (
+            //         //                                     <Link to="/admin/subjects">
+            //         //                                         Quản lý bộ môn
+            //         //                                     </Link>
+            //         //                                 ),
+            //         //                             },
+            //         //                         ]
+            //         //                       : []),
+            //         //               ],
+            //         //           },
+            //         //       ]
+            //         //     : []),
+            //     ],
+            // },
         ];
 
         return (

@@ -9,6 +9,7 @@ import {
     Modal,
     Alert,
     ListGroup,
+    Image,
 } from "react-bootstrap";
 import { connect } from "react-redux";
 import {
@@ -83,9 +84,9 @@ class MyOrders extends Component {
             case "confirmed":
                 return "Đã xác nhận";
             case "picking":
-                return "Đang chuẩn bị hàng";
+                return "Đang lấy hàng";
             case "picked":
-                return "Đã chuẩn bị xong";
+                return "Đã lấy hàng";
             case "storing":
                 return "Đang lưu kho";
             case "transporting":
@@ -255,7 +256,7 @@ class MyOrders extends Component {
                     <Modal.Body>
                         {selectedOrder && (
                             <Row>
-                                <Col md={6}>
+                                <Col md={4}>
                                     <h5 className="fw-semibold mb-3">
                                         Thông tin đơn hàng
                                     </h5>
@@ -364,7 +365,7 @@ class MyOrders extends Component {
                                             "Không có ghi chú"}
                                     </p>
                                 </Col>
-                                <Col md={6}>
+                                <Col md={4}>
                                     <h5 className="fw-semibold mb-3">
                                         Lịch sử đơn hàng
                                     </h5>
@@ -446,6 +447,80 @@ class MyOrders extends Component {
                                             đ
                                         </ListGroup.Item>
                                     </ListGroup>
+                                </Col>
+                                <Col md={4}>
+                                    <h5 className="fw-semibold mb-3">
+                                        Sản phẩm
+                                    </h5>
+                                    {selectedOrder.items &&
+                                    selectedOrder.items.length > 0 ? (
+                                        <ListGroup variant="flush">
+                                            {selectedOrder.items.map(
+                                                (item, index) => (
+                                                    <ListGroup.Item
+                                                        key={index}
+                                                        className="d-flex align-items-center"
+                                                    >
+                                                        <Image
+                                                            src={
+                                                                item.book
+                                                                    .cover_image
+                                                            }
+                                                            alt={
+                                                                item.book.title
+                                                            }
+                                                            thumbnail
+                                                            style={{
+                                                                width: "60px",
+                                                                height: "80px",
+                                                                marginRight:
+                                                                    "10px",
+                                                                objectFit:
+                                                                    "cover",
+                                                            }}
+                                                        />
+                                                        <div>
+                                                            <p className="mb-1 fw-semibold">
+                                                                {
+                                                                    item.book
+                                                                        .title
+                                                                }
+                                                            </p>
+                                                            <p className="mb-1">
+                                                                Số lượng:{" "}
+                                                                {item.quantity}
+                                                            </p>
+                                                            <p className="mb-1">
+                                                                Đơn giá:{" "}
+                                                                {parseFloat(
+                                                                    item.unit_price
+                                                                ).toLocaleString(
+                                                                    "vi-VN"
+                                                                )}{" "}
+                                                                đ
+                                                            </p>
+                                                            <p className="mb-0">
+                                                                Tổng:{" "}
+                                                                {(
+                                                                    parseFloat(
+                                                                        item.final_price
+                                                                    ) *
+                                                                    item.quantity
+                                                                ).toLocaleString(
+                                                                    "vi-VN"
+                                                                )}{" "}
+                                                                đ
+                                                            </p>
+                                                        </div>
+                                                    </ListGroup.Item>
+                                                )
+                                            )}
+                                        </ListGroup>
+                                    ) : (
+                                        <p className="text-muted">
+                                            Không có sản phẩm nào.
+                                        </p>
+                                    )}
                                 </Col>
                             </Row>
                         )}

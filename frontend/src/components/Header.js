@@ -15,47 +15,47 @@ import "./Header.css";
 import AccountMenu from "./AccountMenu";
 import { connect } from "react-redux";
 import { getCartItems } from "./../store/actions/cart/cartAction";
+import { getActiveCustomCategories } from "../store/actions/customCategory/customCategoryActions";
+
 class Header extends Component {
     constructor(props) {
         super(props);
         this.state = {
-            showCategories: false,
             showCart: false,
+            showCategories: false,
         };
     }
 
     componentDidMount() {
-        this.props.getCartItems();
+        const { getCartItems, getActiveCustomCategories } = this.props;
+        getCartItems();
+        getActiveCustomCategories();
     }
 
-    componentDidUpdate(prevProps) {
-        const { cartItems, loading, error } = this.props;
-        // Nếu có thay đổi từ props thì cập nhật loading và error (không lưu cartItems vào state vì đã có từ props)
-        if (prevProps.cartItems !== cartItems) {
-            this.setState({ loading: false });
-        }
-        if (prevProps.loading !== loading) {
-            this.setState({ loading });
-        }
-        if (prevProps.error !== error) {
-            this.setState({ error });
-        }
-    }
+    toggleCart = () => {
+        this.setState((prevState) => ({ showCart: !prevState.showCart }));
+    };
+
+    toggleCategories = () => {
+        this.setState((prevState) => ({
+            showCategories: !prevState.showCategories,
+        }));
+    };
+
+    showCategoriesOnHover = () => {
+        this.setState({ showCategories: true });
+    };
+
+    hideCategoriesOnLeave = () => {
+        this.setState({ showCategories: false });
+    };
 
     render() {
-        const { showCategories, showCart } = this.state;
-        const { user, cartItems } = this.props;
-        const cartItemCount =
-            cartItems && cartItems.data ? cartItems.data.total_items : 0;
+        const { showCart, showCategories } = this.state;
+        const { user, cartItems, customCategories, loading, error } =
+            this.props;
 
-        const categories = [
-            { name: "Văn học", path: "/categories/van-hoc" },
-            { name: "Kinh tế", path: "/categories/kinh-te" },
-            { name: "Tâm lý - Kỹ năng sống", path: "/categories/tam-ly" },
-            { name: "Nuôi dạy con", path: "/categories/nuoi-day-con" },
-            { name: "Sách giáo khoa", path: "/categories/sach-giao-khoa" },
-            { name: "Học ngoại ngữ", path: "/categories/ngoai-ngu" },
-        ];
+        const cartItemCount = cartItems?.data?.total_items || 0;
 
         return (
             <>
@@ -74,22 +74,35 @@ class Header extends Component {
                                     id="basic-nav-dropdown"
                                     className="category-dropdown"
                                     show={showCategories}
-                                    onMouseEnter={() =>
-                                        this.setState({ showCategories: true })
-                                    }
-                                    onMouseLeave={() =>
-                                        this.setState({ showCategories: false })
-                                    }
+                                    onClick={this.toggleCategories} // Hỗ trợ mobile
+                                    onMouseEnter={this.showCategoriesOnHover} // Hỗ trợ desktop
+                                    onMouseLeave={this.hideCategoriesOnLeave}
                                 >
-                                    {categories.map((category, index) => (
-                                        <NavDropdown.Item
-                                            key={index}
-                                            as={Link}
-                                            to={category.path}
-                                        >
-                                            {category.name}
+                                    {loading ? (
+                                        <NavDropdown.Item disabled>
+                                            Đang tải...
                                         </NavDropdown.Item>
-                                    ))}
+                                    ) : error ? (
+                                        <NavDropdown.Item disabled>
+                                            Lỗi: {error}
+                                        </NavDropdown.Item>
+                                    ) : customCategories?.length > 0 ? (
+                                        customCategories.map((category) => (
+                                            <NavDropdown.Item
+                                                key={category.id}
+                                                as={Link}
+                                                to={`/categories/${
+                                                    category.slug || category.id
+                                                }`}
+                                            >
+                                                {category.name}
+                                            </NavDropdown.Item>
+                                        ))
+                                    ) : (
+                                        <NavDropdown.Item disabled>
+                                            Không có danh mục
+                                        </NavDropdown.Item>
+                                    )}
                                 </NavDropdown>
                             </Nav>
 
@@ -118,9 +131,7 @@ class Header extends Component {
 
                                 <Nav.Link
                                     className="nav-icon"
-                                    onClick={() =>
-                                        this.setState({ showCart: true })
-                                    }
+                                    onClick={this.toggleCart}
                                 >
                                     <div className="cart-icon-container">
                                         <FaShoppingCart />
@@ -157,7 +168,7 @@ class Header extends Component {
 
                 <CartSidebar
                     show={showCart}
-                    handleClose={() => this.setState({ showCart: false })}
+                    handleClose={this.toggleCart}
                     cartItems={cartItems}
                 />
             </>
@@ -168,12 +179,14 @@ class Header extends Component {
 const mapStateToProps = (state) => ({
     user: state.userReducer.user,
     cartItems: state.cartReducer.cartItems,
+    customCategories: state.customCategoryReducer.activeCustomCategories, // ✅ Lấy activeCustomCategories
+    loading: state.customCategoryReducer.loading,
+    error: state.customCategoryReducer.error,
 });
 
-const mapDispatchToProps = (dispatch) => {
-    return {
-        getCartItems: () => dispatch(getCartItems()),
-    };
+const mapDispatchToProps = {
+    getCartItems,
+    getActiveCustomCategories,
 };
 
 export default connect(mapStateToProps, mapDispatchToProps)(Header);

@@ -1,26 +1,73 @@
 .home-page {
+    background-color: #f5f5f5;
     padding-bottom: 40px;
 }
 
 .main-banner {
     margin-bottom: 40px;
+    border-radius: 12px;
+    overflow: hidden;
 }
 
 .main-banner .carousel-item {
-    height: 400px;
+    height: 450px;
 }
 
 .main-banner img {
     height: 100%;
     object-fit: cover;
+    transition: transform 0.5s ease;
 }
 
-.main-banner .carousel-caption {
-    background: rgba(0, 0, 0, 0.5);
-    padding: 20px;
+.main-banner .carousel-item:hover img {
+    transform: scale(1.05);
+}
+
+.banner-caption {
+    background: rgba(0, 0, 0, 0.6);
+    padding: 25px;
     border-radius: 8px;
-    max-width: 500px;
+    max-width: 600px;
     margin: 0 auto;
+    transform: translateY(10px);
+    transition: transform 0.3s ease;
+}
+
+.main-banner .carousel-item:hover .banner-caption {
+    transform: translateY(0);
+}
+
+.banner-caption h1 {
+    font-size: 36px;
+    font-weight: 700;
+    color: #fff;
+}
+
+.banner-caption p {
+    font-size: 18px;
+    color: #ddd;
+}
+
+.main-content {
+    padding: 0 15px;
+}
+
+.filter-toggle-section {
+    margin-bottom: 20px;
+    text-align: right;
+}
+
+.filter-toggle {
+    font-size: 16px;
+    padding: 10px 20px;
+}
+
+.filter-offcanvas {
+    width: 300px !important;
+}
+
+.filter-offcanvas .offcanvas-body {
+    padding: 20px;
 }
 
 .book-section {
@@ -36,36 +83,79 @@
 
 .section-header h2 {
     margin: 0;
-    font-size: 24px;
-    font-weight: bold;
+    font-size: 28px;
+    font-weight: 700;
+    color: #333;
 }
 
-.features {
-    margin-top: 60px;
-    padding: 40px 0;
-    background-color: #f8f9fa;
+.promo-banner {
+    position: relative;
     border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 30px;
 }
 
-.feature-item {
-    text-align: center;
-    padding: 20px;
+.promo-banner img {
+    height: 200px;
+    object-fit: cover;
+    width: 100%;
 }
 
-.feature-item i {
-    font-size: 32px;
-    color: var(--primary-color);
-    margin-bottom: 16px;
+.promo-content {
+    position: absolute;
+    top: 50%;
+    left: 30px;
+    transform: translateY(-50%);
+    color: #fff;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
 }
 
-.feature-item h4 {
-    font-size: 18px;
-    margin-bottom: 8px;
+.promo-content h3 {
+    font-size: 26px;
+    font-weight: 700;
 }
 
-.feature-item p {
-    color: #666;
-    margin: 0;
+.promo-content p {
+    font-size: 16px;
+}
+
+/* Custom grid for 5 books per row */
+.book-grid {
+    margin-left: -10px;
+    margin-right: -10px;
+}
+
+.book-col {
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
+@media (min-width: 992px) {
+    .book-col {
+        flex: 0 0 20%;
+        max-width: 20%;
+    }
+}
+
+@media (max-width: 991px) {
+    .book-col {
+        flex: 0 0 33.333333%;
+        max-width: 33.333333%;
+    }
+}
+
+@media (max-width: 767px) {
+    .book-col {
+        flex: 0 0 50%;
+        max-width: 50%;
+    }
+}
+
+@media (max-width: 575px) {
+    .book-col {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
 }
 
 @media (max-width: 768px) {
@@ -73,11 +163,37 @@
         height: 300px;
     }
 
-    .main-banner .carousel-caption {
+    .banner-caption {
         padding: 15px;
     }
 
-    .feature-item {
-        margin-bottom: 20px;
+    .banner-caption h1 {
+        font-size: 24px;
     }
-} 
+
+    .banner-caption p {
+        font-size: 14px;
+    }
+
+    .promo-banner img {
+        height: 150px;
+    }
+
+    .promo-content h3 {
+        font-size: 20px;
+    }
+
+    .promo-content p {
+        font-size: 14px;
+    }
+}
+
+@media (max-width: 576px) {
+    .section-header h2 {
+        font-size: 24px;
+    }
+
+    .filter-toggle-section {
+        text-align: center;
+    }
+}

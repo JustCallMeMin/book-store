@@ -6,6 +6,7 @@ import authorReducer from "./author.reducer";
 import publisherReducer from "./publisher.reducer";
 import cartReducer from "./cart.reducer";
 import orderReducer from "./order.reducer";
+import customCategoryReducer from "./customCategory.reducer";
 
 const rootReducer = combineReducers({
     userReducer,
@@ -15,6 +16,7 @@ const rootReducer = combineReducers({
     publisherReducer,
     cartReducer,
     orderReducer,
+    customCategoryReducer,
 });
 
 export default rootReducer;

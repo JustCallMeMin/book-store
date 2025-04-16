@@ -1,7 +1,15 @@
 import React, { Component } from "react";
 import { connect } from "react-redux";
 import DataManagementPage from "../components/DataManagementPage";
-import { message, Spin, Button, Modal, Timeline, Descriptions } from "antd";
+import {
+    message,
+    Spin,
+    Button,
+    Modal,
+    Timeline,
+    Descriptions,
+    Image,
+} from "antd";
 import { Navigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { getOrders, confirmOrder } from "src/store/actions/order/orderActions";
@@ -94,9 +102,9 @@ class OrderManagement extends Component {
             case "confirmed":
                 return "Đã xác nhận";
             case "picking":
-                return "Đang chuẩn bị hàng";
+                return "Đang lấy hàng";
             case "picked":
-                return "Đã chuẩn bị xong";
+                return "Đã lấy hàng";
             case "storing":
                 return "Đang lưu kho";
             case "transporting":
@@ -292,17 +300,66 @@ class OrderManagement extends Component {
                         Array.isArray(order.items) &&
                         order.items.length > 0 && (
                             <Descriptions.Item label="Sản phẩm">
-                                <ul>
+                                <div>
                                     {order.items.map((item, index) => (
-                                        <li key={index}>
-                                            {item.name} (x{item.quantity}) -{" "}
-                                            {parseFloat(
-                                                item.price
-                                            ).toLocaleString("vi-VN")}{" "}
-                                            đ
-                                        </li>
+                                        <div
+                                            key={index}
+                                            style={{
+                                                display: "flex",
+                                                alignItems: "center",
+                                                marginBottom: "16px",
+                                                padding: "8px",
+                                                border: "1px solid #f0f0f0",
+                                                borderRadius: "4px",
+                                            }}
+                                        >
+                                            <Image
+                                                src={item.book.cover_image}
+                                                alt={item.book.title}
+                                                style={{
+                                                    width: "60px",
+                                                    height: "80px",
+                                                    marginRight: "16px",
+                                                    objectFit: "cover",
+                                                }}
+                                                preview={false}
+                                            />
+                                            <div>
+                                                <p
+                                                    style={{
+                                                        margin: 0,
+                                                        fontWeight: 500,
+                                                    }}
+                                                >
+                                                    {item.book.title}
+                                                </p>
+                                                <p style={{ margin: "4px 0" }}>
+                                                    Số lượng: {item.quantity}
+                                                </p>
+                                                <p style={{ margin: "4px 0" }}>
+                                                    Đơn giá:{" "}
+                                                    {parseFloat(
+                                                        item.unit_price
+                                                    ).toLocaleString(
+                                                        "vi-VN"
+                                                    )}{" "}
+                                                    đ
+                                                </p>
+                                                <p style={{ margin: "4px 0" }}>
+                                                    Tổng:{" "}
+                                                    {(
+                                                        parseFloat(
+                                                            item.final_price
+                                                        ) * item.quantity
+                                                    ).toLocaleString(
+                                                        "vi-VN"
+                                                    )}{" "}
+                                                    đ
+                                                </p>
+                                            </div>
+                                        </div>
                                     ))}
-                                </ul>
+                                </div>
                             </Descriptions.Item>
                         )}
                 </Descriptions>

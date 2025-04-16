@@ -14,6 +14,7 @@ use App\Http\Controllers\PublisherController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\OrderController;
+use App\Http\Controllers\CustomCategoryController;
 
 // Redirect old Google OAuth routes to new web routes
 Route::get('/auth/google/redirect', function () {
@@ -186,3 +187,9 @@ Route::put('/publishers/{id}', [PublisherController::class, 'update'])
 Route::delete('/publishers/{id}', [PublisherController::class, 'destroy'])
     ->middleware(['auth:api', 'requires.permission:publishers:delete'])
     ->name('api.publishers.destroy');
+Route::get('/custom-categories', [CustomCategoryController::class, 'index']);
+Route::get('/custom-categories/active', [CustomCategoryController::class, 'active']);
+Route::post('/custom-categories', [CustomCategoryController::class, 'store']);
+Route::get('/custom-categories/{custom_category}', [CustomCategoryController::class, 'show']);
+Route::put('/custom-categories/{custom_category}', [CustomCategoryController::class, 'update']);
+Route::delete('/custom-categories/{custom_category}', [CustomCategoryController::class, 'destroy']);

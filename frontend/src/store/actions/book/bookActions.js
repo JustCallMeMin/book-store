@@ -42,12 +42,51 @@ const fetchBooksFailure = (error) => ({
     payload: error,
 });
 
-export const fetchBooks = (page, per_page) => {
+export const fetchBooks = (filters = {}) => {
     return async (dispatch) => {
         dispatch(fetchBooksRequest());
         try {
+            // Build query string from filters
+            const queryParams = new URLSearchParams();
+
+            if (filters.page) queryParams.append("page", filters.page);
+            if (filters.per_page)
+                queryParams.append("per_page", filters.per_page);
+            if (filters.search) queryParams.append("search", filters.search);
+            if (filters.category)
+                queryParams.append("category", filters.category);
+            if (filters.author_id)
+                queryParams.append("author_id", filters.author_id);
+            if (filters.language)
+                queryParams.append("language", filters.language);
+            if (filters.is_featured !== undefined)
+                queryParams.append("is_featured", filters.is_featured);
+            if (filters.is_active !== undefined)
+                queryParams.append("is_active", filters.is_active);
+            if (filters.price_min)
+                queryParams.append("price_min", filters.price_min);
+            if (filters.price_max)
+                queryParams.append("price_max", filters.price_max);
+            if (filters.published_year_min)
+                queryParams.append(
+                    "published_year_min",
+                    filters.published_year_min
+                );
+            if (filters.published_year_max)
+                queryParams.append(
+                    "published_year_max",
+                    filters.published_year_max
+                );
+            if (filters.publisher)
+                queryParams.append("publisher", filters.publisher);
+            if (filters.publisher_id)
+                queryParams.append("publisher_id", filters.publisher_id);
+            if (filters.sort_by) queryParams.append("sort_by", filters.sort_by);
+            if (filters.sort_direction)
+                queryParams.append("sort_direction", filters.sort_direction);
+            console.log(queryParams.toString());
             const response = await customAxios.get(
-                `${BASE_URL}gutendex/books?page=${page}&per_page=${per_page}`
+                `${BASE_URL}gutendex/books?${queryParams.toString()}`
             );
             dispatch(fetchBooksSuccess(response.data));
         } catch (error) {
@@ -56,6 +95,7 @@ export const fetchBooks = (page, per_page) => {
     };
 };
 
+// Rest of the file remains unchanged
 export const fetchAllBooks = () => {
     return async (dispatch) => {
         dispatch(fetchBooksRequest());

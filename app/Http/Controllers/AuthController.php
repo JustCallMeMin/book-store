@@ -3,14 +3,28 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 use App\Services\AuthService;
 use App\Services\RedisActivityService;
 
 class AuthController extends Controller
 {
+    /**
+     * The authentication service instance.
+     */
     protected AuthService $authService;
+    
+    /**
+     * The activity logging service instance.
+     */
     protected RedisActivityService $activityService;
 
+    /**
+     * Create a new AuthController instance.
+     *
+     * @param AuthService $authService
+     * @param RedisActivityService $activityService
+     */
     public function __construct(
         AuthService $authService,
         RedisActivityService $activityService
@@ -20,31 +34,37 @@ class AuthController extends Controller
     }
 
     /**
-     * Đăng ký tài khoản mới.
+     * Register a new user account.
+     *
+     * @param Request $request
+     * @return JsonResponse
      */
-    public function register(Request $request)
+    public function register(Request $request): JsonResponse
     {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255|unique:users',
+            'password' => 'required|string|min:8|confirmed',
+        ]);
+        
         $result = $this->authService->register($request->all());
         
-        // Ghi lại hoạt động nếu đăng ký thành công
-        if ($result['status'] === 201 && isset($result['user'])) {
-            $this->activityService->log(
-                $result['user']['id'],
-                'register',
-                'User registered successfully',
-                [],
-                $request->ip(),
-                $request->userAgent()
-            );
-        }
+        $this->logActivityIfSuccessful(
+            $result, 
+            'register',
+            'User registered successfully'
+        );
         
         return $this->handleResponse($result);
     }
 
     /**
-     * Đăng nhập tài khoản đã có.
+     * Login an existing user.
+     *
+     * @param Request $request
+     * @return JsonResponse
      */
-    public function login(Request $request)
+    public function login(Request $request): JsonResponse
     {
         $request->validate([
             'email' => 'required|string|email',
@@ -54,40 +74,31 @@ class AuthController extends Controller
         
         $result = $this->authService->login($request->all());
         
-        // Ghi lại hoạt động nếu đăng nhập thành công
-        if ($result['status'] === 200 && isset($result['user'])) {
-            $this->activityService->log(
-                $result['user']['id'],
-                'login',
-                'User logged in',
-                ['method' => 'credentials'],
-                $request->ip(),
-                $request->userAgent()
-            );
-        }
+        $this->logActivityIfSuccessful(
+            $result, 
+            'login',
+            'User logged in',
+            ['method' => 'credentials']
+        );
         
         return $this->handleResponse($result);
     }
 
     /**
-     * Đăng xuất người dùng.
+     * Logout the current user.
+     *
+     * @return JsonResponse
      */
-    public function logout()
+    public function logout(): JsonResponse
     {
-        // Lấy user ID trước khi đăng xuất
         $userId = auth()->id();
-        
         $result = $this->authService->logout();
         
-        // Ghi lại hoạt động đăng xuất
         if ($userId) {
-            $this->activityService->log(
+            $this->logActivity(
                 $userId,
                 'logout',
-                'User logged out',
-                [],
-                request()->ip(),
-                request()->userAgent()
+                'User logged out'
             );
         }
         
@@ -95,22 +106,20 @@ class AuthController extends Controller
     }
 
     /**
-     * Lấy thông tin người dùng.
+     * Get the authenticated user's profile.
+     *
+     * @return JsonResponse
      */
-    public function profile()
+    public function profile(): JsonResponse
     {
         $userId = auth()->id();
         $result = $this->authService->profile();
         
-        // Ghi lại hoạt động xem hồ sơ
         if ($userId) {
-            $this->activityService->log(
+            $this->logActivity(
                 $userId,
                 'view_profile',
-                'User viewed their profile',
-                [],
-                request()->ip(),
-                request()->userAgent()
+                'User viewed their profile'
             );
         }
         
@@ -118,22 +127,29 @@ class AuthController extends Controller
     }
 
     /**
-     * Cập nhật thông tin người dùng.
+     * Update the authenticated user's profile.
+     *
+     * @param Request $request
+     * @return JsonResponse
      */
-    public function updateProfile(Request $request)
+    public function updateProfile(Request $request): JsonResponse
     {
+        $request->validate([
+            'name' => 'sometimes|string|max:255',
+            'email' => 'sometimes|string|email|max:255|unique:users,email,' . auth()->id(),
+            'phone' => 'sometimes|string|max:20',
+            'address' => 'sometimes|string|max:255',
+        ]);
+        
         $userId = auth()->id();
         $result = $this->authService->updateProfile($request->all());
         
-        // Ghi lại hoạt động cập nhật hồ sơ
         if ($result['status'] === 200 && $userId) {
-            $this->activityService->log(
+            $this->logActivity(
                 $userId,
                 'update_profile',
                 'User updated their profile',
-                ['fields' => array_keys($request->except(['password', 'token']))],
-                $request->ip(),
-                $request->userAgent()
+                ['fields' => array_keys($request->except(['password', 'token']))]
             );
         }
         
@@ -141,22 +157,26 @@ class AuthController extends Controller
     }
 
     /**
-     * Đổi mật khẩu.
+     * Change the authenticated user's password.
+     *
+     * @param Request $request
+     * @return JsonResponse
      */
-    public function changePassword(Request $request)
+    public function changePassword(Request $request): JsonResponse
     {
+        $request->validate([
+            'current_password' => 'required|string',
+            'password' => 'required|string|min:8|confirmed',
+        ]);
+        
         $userId = auth()->id();
         $result = $this->authService->changePassword($request->all());
         
-        // Ghi lại hoạt động đổi mật khẩu
         if ($result['status'] === 200 && $userId) {
-            $this->activityService->log(
+            $this->logActivity(
                 $userId,
                 'change_password',
-                'User changed their password',
-                [],
-                $request->ip(),
-                $request->userAgent()
+                'User changed their password'
             );
         }
         
@@ -164,35 +184,122 @@ class AuthController extends Controller
     }
 
     /**
-     * Refresh token.
+     * Refresh the authentication token.
+     *
+     * @return JsonResponse
      */
-    public function refreshToken()
+    public function refreshToken(): JsonResponse
     {
-        return $this->handleResponse($this->authService->refreshToken());
+        $userId = auth()->id();
+        $result = $this->authService->refreshToken();
+        
+        if ($result['status'] === 200 && $userId) {
+            $this->logActivity(
+                $userId,
+                'refresh_token',
+                'User refreshed their token'
+            );
+        }
+        
+        return $this->handleResponse($result);
     }
 
     /**
-     * Gửi email quên mật khẩu với OTP.
+     * Send password reset OTP to the user's email.
+     *
+     * @param Request $request
+     * @return JsonResponse
      */
-    public function forgotPassword(Request $request)
+    public function forgotPassword(Request $request): JsonResponse
     {
-        $request->validate(['email' => 'required|string|email']);
-        return $this->handleResponse($this->authService->sendPasswordResetOtp($request->email));
+        $request->validate([
+            'email' => 'required|string|email|exists:users,email'
+        ]);
+        
+        return $this->handleResponse(
+            $this->authService->sendPasswordResetOtp($request->email)
+        );
     }
 
     /**
-     * Reset mật khẩu bằng OTP.
+     * Reset the user's password using OTP.
+     *
+     * @param Request $request
+     * @return JsonResponse
      */
-    public function resetPassword(Request $request)
+    public function resetPassword(Request $request): JsonResponse
     {
-        return $this->handleResponse($this->authService->resetPassword($request->all()));
+        $request->validate([
+            'email' => 'required|string|email',
+            'otp' => 'required|string',
+            'password' => 'required|string|min:8|confirmed',
+        ]);
+        
+        return $this->handleResponse(
+            $this->authService->resetPassword($request->all())
+        );
     }
 
     /**
-     * Chuẩn hóa response API
+     * Standardize the API response format.
+     *
+     * @param array $result
+     * @return JsonResponse
      */
-    private function handleResponse(array $result)
+    private function handleResponse(array $result): JsonResponse
     {
-        return response()->json($result, $result['status']);
+        $status = $result['status'] ?? 500;
+        return response()->json($result, $status);
+    }
+    
+    /**
+     * Log a user activity.
+     *
+     * @param int $userId
+     * @param string $action
+     * @param string $description
+     * @param array $metadata
+     * @return void
+     */
+    private function logActivity(
+        int $userId, 
+        string $action, 
+        string $description, 
+        array $metadata = []
+    ): void {
+        $this->activityService->log(
+            $userId,
+            $action,
+            $description,
+            $metadata,
+            request()->ip(),
+            request()->userAgent()
+        );
+    }
+    
+    /**
+     * Log activity if the operation was successful.
+     *
+     * @param array $result
+     * @param string $action
+     * @param string $description
+     * @param array $metadata
+     * @return void
+     */
+    private function logActivityIfSuccessful(
+        array $result,
+        string $action,
+        string $description,
+        array $metadata = []
+    ): void {
+        $successStatuses = [200, 201];
+        if (in_array($result['status'] ?? 0, $successStatuses) && isset($result['user'])) {
+            $this->logActivity(
+                $result['user']['id'],
+                $action,
+                $description,
+                $metadata
+            );
+        }
     }
 }

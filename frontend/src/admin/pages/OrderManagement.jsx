@@ -159,6 +159,12 @@ class OrderManagement extends Component {
                 width: 150,
             },
             {
+                title: "Mã vận chuyển",
+                dataIndex: "ship_code",
+                key: "ship_code",
+                width: 150,
+            },
+            {
                 title: "Người nhận",
                 dataIndex: "recipient_name",
                 key: "recipient_name",
@@ -248,6 +254,9 @@ class OrderManagement extends Component {
                 <Descriptions title="Chi tiết đơn hàng" bordered column={1}>
                     <Descriptions.Item label="Mã đơn hàng">
                         {order.order_code}
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Mã vận chuyển">
+                        {order.ship_code}
                     </Descriptions.Item>
                     <Descriptions.Item label="Người nhận">
                         {order.recipient_name}
@@ -350,6 +359,7 @@ class OrderManagement extends Component {
             ? orders.map((item) => ({
                   key: item.order.id,
                   order_code: item.order.order_code,
+                  ship_code: item.order.ship_code ?? "Chưa có",
                   recipient_name: item.order.recipient_name,
                   final_amount: item.order.final_amount,
                   status: item.order.status,

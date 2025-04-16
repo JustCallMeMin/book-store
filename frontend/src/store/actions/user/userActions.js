@@ -294,7 +294,7 @@ const fetchUserListFailure = (error) => ({
 export const fetchUserList = () => async (dispatch) => {
     dispatch(fetchUserListRequest());
     // eslint-disable-next-line no-useless-concat
-    const apiUrl = BASE_URL + `auth/list-user`;
+    const apiUrl = BASE_URL + `users`;
     // const apiUrl = BASE_URL + `user-list?page=${page}&limit=${limit}`;
     try {
         const res = await customAxios.get(apiUrl, { withCredentials: true });

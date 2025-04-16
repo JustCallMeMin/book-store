@@ -125,7 +125,8 @@ export const getWards = (districtId) => async (dispatch) => {
             withCredentials: true,
         });
         if (res.status === 200) {
-            dispatch(getWardsSuccess(res.data.data));
+            console.log(res.data);
+            dispatch(getWardsSuccess(res.data.data.wards));
         } else {
             dispatch(
                 getWardsFailure(res.data.message || "Failed to fetch wards")

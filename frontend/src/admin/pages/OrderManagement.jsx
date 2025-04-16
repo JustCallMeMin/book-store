@@ -12,7 +12,11 @@ import {
 } from "antd";
 import { Navigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import { getOrders, confirmOrder } from "src/store/actions/order/orderActions";
+import {
+    getOrders,
+    confirmOrder,
+    cancelOrder,
+} from "src/store/actions/order/orderActions";
 import { parsePermissionsForPage } from "../utils/permissionHelper";
 import { getPermissionsFromApi } from "src/store/actions/user/userActions";
 
@@ -64,7 +68,13 @@ class OrderManagement extends Component {
     }
 
     componentDidUpdate(prevProps) {
-        const { ordersError, confirmOrderError, orderConfirmed } = this.props;
+        const {
+            ordersError,
+            confirmOrderError,
+            orderConfirmed,
+            cancelOrderError,
+            orderCancelled,
+        } = this.props;
 
         if (prevProps.ordersError !== ordersError && ordersError) {
             message.error(
@@ -82,6 +92,18 @@ class OrderManagement extends Component {
         if (prevProps.orderConfirmed !== orderConfirmed && orderConfirmed) {
             message.success("Xác nhận đơn hàng thành công");
             this.props.getOrders(); // Refresh orders after confirmation
+        }
+
+        if (
+            prevProps.cancelOrderError !== cancelOrderError &&
+            cancelOrderError
+        ) {
+            message.error(`Có lỗi khi hủy đơn hàng: ${cancelOrderError}`);
+        }
+
+        if (prevProps.orderCancelled !== orderCancelled && orderCancelled) {
+            message.success("Hủy đơn hàng thành công");
+            this.props.getOrders(); // Refresh orders after cancellation
         }
 
         if (
@@ -136,6 +158,10 @@ class OrderManagement extends Component {
 
     handleConfirmOrder = (orderCode) => {
         this.props.confirmOrder(orderCode);
+    };
+
+    handleCancelOrder = (orderCode) => {
+        this.props.cancelOrder(orderCode);
     };
 
     handleViewDetails = (order) => {
@@ -220,7 +246,7 @@ class OrderManagement extends Component {
             {
                 title: "Thao tác",
                 key: "action",
-                width: 200,
+                width: 250,
                 render: (text, record, index) => (
                     <div style={{ display: "flex", gap: "8px" }}>
                         <Button
@@ -242,6 +268,19 @@ class OrderManagement extends Component {
                                 disabled={this.props.confirmingOrder}
                             >
                                 Xác nhận
+                            </Button>
+                        )}
+                        {record.status === "pending" && (
+                            <Button
+                                danger
+                                size="small"
+                                onClick={() =>
+                                    this.handleCancelOrder(record.order_code)
+                                }
+                                loading={this.props.deletingOrder}
+                                disabled={this.props.deletingOrder}
+                            >
+                                Hủy đơn
                             </Button>
                         )}
                     </div>
@@ -460,11 +499,15 @@ const mapStateToProps = (state) => ({
     confirmingOrder: state.orderReducer.confirmingOrder,
     orderConfirmed: state.orderReducer.orderConfirmed,
     confirmOrderError: state.orderReducer.confirmOrderError,
+    deletingOrder: state.orderReducer.deletingOrder,
+    orderCancelled: state.orderReducer.orderCancelled,
+    cancelOrderError: state.orderReducer.cancelOrderError,
 });
 
 const mapDispatchToProps = {
     getOrders,
     confirmOrder,
+    cancelOrder,
     getPermissionsFromApi,
 };
 

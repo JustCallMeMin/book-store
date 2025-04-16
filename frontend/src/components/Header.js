@@ -94,6 +94,12 @@ class Header extends Component {
                                                 to={`/categories/${
                                                     category.slug || category.id
                                                 }`}
+                                                onClick={() =>
+                                                    (window.location.href = `/categories/${
+                                                        category.slug ||
+                                                        category.id
+                                                    }`)
+                                                }
                                             >
                                                 {category.name}
                                             </NavDropdown.Item>

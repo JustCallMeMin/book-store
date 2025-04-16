@@ -15,6 +15,7 @@ import { connect } from "react-redux";
 import {
     getUserOrders,
     initiateMomoPayment,
+    cancelOrder,
 } from "../store/actions/order/orderActions";
 import "./MyOrders.css";
 
@@ -41,6 +42,23 @@ class MyOrders extends Component {
         ) {
             window.location.href = this.props.momoPayUrl;
         }
+
+        // Handle order cancellation success
+        if (
+            prevProps.orderCancelled !== this.props.orderCancelled &&
+            this.props.orderCancelled
+        ) {
+            alert("Hủy đơn hàng thành công");
+            this.props.getUserOrders(); // Refresh orders after cancellation
+        }
+
+        // Handle order cancellation error
+        if (
+            prevProps.cancelOrderError !== this.props.cancelOrderError &&
+            this.props.cancelOrderError
+        ) {
+            alert(`Có lỗi khi hủy đơn hàng: ${this.props.cancelOrderError}`);
+        }
     }
 
     handleShowDetails = (order, logs) => {
@@ -61,6 +79,10 @@ class MyOrders extends Component {
 
     handlePayment = (orderCode) => {
         this.props.initiateMomoPayment(orderCode);
+    };
+
+    handleCancelOrder = (orderCode) => {
+        this.props.cancelOrder(orderCode);
     };
 
     formatDate = (dateString) => {
@@ -153,6 +175,7 @@ class MyOrders extends Component {
             loadingUserOrders,
             userOrdersError,
             initiatingMomoPayment,
+            deletingOrder,
         } = this.props;
 
         return (
@@ -229,10 +252,29 @@ class MyOrders extends Component {
                                                         disabled={
                                                             initiatingMomoPayment
                                                         }
+                                                        className="me-2"
                                                     >
                                                         {initiatingMomoPayment
                                                             ? "Đang xử lý..."
                                                             : "Thanh toán"}
+                                                    </Button>
+                                                )}
+                                                {item.order.status ===
+                                                    "pending" && (
+                                                    <Button
+                                                        variant="danger"
+                                                        size="sm"
+                                                        onClick={() =>
+                                                            this.handleCancelOrder(
+                                                                item.order
+                                                                    .order_code
+                                                            )
+                                                        }
+                                                        disabled={deletingOrder}
+                                                    >
+                                                        {deletingOrder
+                                                            ? "Đang hủy..."
+                                                            : "Hủy đơn"}
                                                     </Button>
                                                 )}
                                             </td>
@@ -546,12 +588,16 @@ const mapStateToProps = (state) => ({
     initiatingMomoPayment: state.orderReducer.initiatingMomoPayment,
     momoPayUrl: state.orderReducer.momoPayUrl,
     momoPaymentError: state.orderReducer.momoPaymentError,
+    deletingOrder: state.orderReducer.deletingOrder,
+    orderCancelled: state.orderReducer.orderCancelled,
+    cancelOrderError: state.orderReducer.cancelOrderError,
 });
 
 const mapDispatchToProps = (dispatch) => ({
     getUserOrders: () => dispatch(getUserOrders()),
     initiateMomoPayment: (orderCode) =>
         dispatch(initiateMomoPayment(orderCode)),
+    cancelOrder: (orderCode) => dispatch(cancelOrder(orderCode)),
 });
 
 export default connect(mapStateToProps, mapDispatchToProps)(MyOrders);

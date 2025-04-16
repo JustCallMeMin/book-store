@@ -1,0 +1,40 @@
+.category-books-page {
+    background-color: #f9f9f9;
+    min-height: 100vh;
+    padding: 20px 0;
+}
+
+.category-header {
+    margin-bottom: 20px;
+}
+
+.category-title {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #333;
+}
+
+.category-description {
+    font-size: 1.2rem;
+    color: #666;
+}
+
+.category-count {
+    font-size: 1rem;
+    color: #999;
+}
+
+.loading-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    text-align: center;
+}
+
+.loading-container p {
+    margin-top: 10px;
+    font-size: 1.2rem;
+    color: #555;
+}

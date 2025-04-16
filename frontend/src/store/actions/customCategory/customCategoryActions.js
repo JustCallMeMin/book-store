@@ -14,6 +14,9 @@ import {
     DELETE_CUSTOM_CATEGORY_REQUEST,
     DELETE_CUSTOM_CATEGORY_SUCCESS,
     DELETE_CUSTOM_CATEGORY_FAILURE,
+    GET_CUSTOM_CATEGORY_FAILURE,
+    GET_CUSTOM_CATEGORY_REQUEST,
+    GET_CUSTOM_CATEGORY_SUCCESS,
 } from "./customCategoryTypes";
 
 import customAxios from "../../../utils/customAxios";
@@ -139,5 +142,27 @@ export const deleteCustomCategory = (id) => async (dispatch) => {
     } catch (err) {
         handleApiError(err);
         dispatch({ type: DELETE_CUSTOM_CATEGORY_FAILURE });
+    }
+};
+
+// GET ONE
+export const getCategory = (id) => async (dispatch) => {
+    dispatch({ type: GET_CUSTOM_CATEGORY_REQUEST });
+
+    try {
+        const res = await customAxios.get(
+            `${BASE_URL}custom-categories/${id}`,
+            {
+                withCredentials: true,
+            }
+        );
+
+        dispatch({
+            type: GET_CUSTOM_CATEGORY_SUCCESS,
+            payload: res.data,
+        });
+    } catch (err) {
+        handleApiError(err);
+        dispatch({ type: GET_CUSTOM_CATEGORY_FAILURE });
     }
 };

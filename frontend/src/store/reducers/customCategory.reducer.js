@@ -14,9 +14,13 @@ import {
     DELETE_CUSTOM_CATEGORY_REQUEST,
     DELETE_CUSTOM_CATEGORY_SUCCESS,
     DELETE_CUSTOM_CATEGORY_FAILURE,
+    GET_CUSTOM_CATEGORY_FAILURE,
+    GET_CUSTOM_CATEGORY_REQUEST,
+    GET_CUSTOM_CATEGORY_SUCCESS,
 } from "../actions/customCategory/customCategoryTypes";
 const initialState = {
     allCustomCategories: [],
+    category: null,
     activeCustomCategories: [],
     loading: false,
     error: null, // ✅ Thêm error
@@ -29,6 +33,7 @@ const customCategoryReducer = (state = initialState, action) => {
         case CREATE_CUSTOM_CATEGORY_REQUEST:
         case UPDATE_CUSTOM_CATEGORY_REQUEST:
         case DELETE_CUSTOM_CATEGORY_REQUEST:
+        case GET_CUSTOM_CATEGORY_REQUEST:
             return {
                 ...state,
                 loading: true,
@@ -56,6 +61,7 @@ const customCategoryReducer = (state = initialState, action) => {
         case CREATE_CUSTOM_CATEGORY_FAILURE:
         case UPDATE_CUSTOM_CATEGORY_FAILURE:
         case DELETE_CUSTOM_CATEGORY_FAILURE:
+        case GET_CUSTOM_CATEGORY_FAILURE:
             return {
                 ...state,
                 loading: false,
@@ -92,7 +98,13 @@ const customCategoryReducer = (state = initialState, action) => {
                 ),
                 error: null,
             };
-
+        case GET_CUSTOM_CATEGORY_SUCCESS:
+            return {
+                ...state,
+                loading: false,
+                category: action.payload,
+                error: null,
+            };
         default:
             return state;
     }

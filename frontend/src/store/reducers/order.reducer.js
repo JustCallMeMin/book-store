@@ -32,6 +32,9 @@ import {
     CONFIRM_ORDER_REQUEST,
     CONFIRM_ORDER_SUCCESS,
     CONFIRM_ORDER_FAILURE,
+    CANCEL_ORDER_FAILURE,
+    CANCEL_ORDER_REQUEST,
+    CANCEL_ORDER_SUCCESS,
 } from "../actions/order/orderTypes";
 
 const initialState = {
@@ -66,6 +69,9 @@ const initialState = {
     userOrdersError: null,
     ordersError: null,
     confirmOrderError: null,
+    deletingOrder: false,
+    orderCancelled: false,
+    cancelOrderError: null,
 };
 
 const orderReducer = (state = initialState, action) => {
@@ -247,6 +253,26 @@ const orderReducer = (state = initialState, action) => {
                 confirmingOrder: false,
                 confirmOrderError: action.payload,
                 orderConfirmed: false,
+            };
+        case CANCEL_ORDER_REQUEST:
+            return {
+                ...state,
+                deletingOrder: true,
+                cancelOrderError: null,
+                orderCancelled: false,
+            };
+        case CANCEL_ORDER_SUCCESS:
+            return {
+                ...state,
+                deletingOrder: false,
+                orderCancelled: true,
+            };
+        case CANCEL_ORDER_FAILURE:
+            return {
+                ...state,
+                deletingOrder: false,
+                cancelOrderError: action.payload,
+                orderCancelled: false,
             };
         default:
             return state;

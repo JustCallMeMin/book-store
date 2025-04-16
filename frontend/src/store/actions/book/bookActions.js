@@ -95,6 +95,21 @@ export const fetchBooks = (filters = {}) => {
     };
 };
 
+export const fetchBooksByFilter = (filterQuery = "") => {
+    return async (dispatch) => {
+        dispatch(fetchBooksRequest());
+        try {
+            // Gọi API với filterQuery được truyền trực tiếp
+            const response = await customAxios.get(
+                `${BASE_URL}gutendex/books${filterQuery}`
+            );
+            dispatch(fetchBooksSuccess(response.data.data.books));
+        } catch (error) {
+            handleApiError(dispatch, fetchBooksFailure, error);
+        }
+    };
+};
+
 // Rest of the file remains unchanged
 export const fetchAllBooks = () => {
     return async (dispatch) => {

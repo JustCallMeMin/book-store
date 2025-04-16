@@ -12,6 +12,7 @@ import {
     Offcanvas,
 } from "react-bootstrap";
 import { debounce } from "lodash";
+import { motion } from "framer-motion"; // Import motion từ Framer Motion
 import BookCard from "../components/BookCard";
 import "./HomePage.css";
 import { connect } from "react-redux";
@@ -36,7 +37,7 @@ const HomePage = ({ books, loading, error, fetchBooks }) => {
     const debouncedFetchBooks = useCallback(
         debounce((newFilters, newPage) => {
             fetchBooks({ ...newFilters, page: newPage, per_page: perPage });
-        }, 500),
+        }, 2000), // Delay 500ms
         [fetchBooks, perPage]
     );
 
@@ -49,7 +50,7 @@ const HomePage = ({ books, loading, error, fetchBooks }) => {
         const { name, value } = e.target;
         setFilters((prevFilters) => {
             const newFilters = { ...prevFilters, [name]: value };
-            debouncedFetchBooks(newFilters, 1);
+            debouncedFetchBooks(newFilters, 1); // Gọi API với debounce
             return newFilters;
         });
         setPage(1);
@@ -138,9 +139,6 @@ const HomePage = ({ books, loading, error, fetchBooks }) => {
             ? books.data.books
             : [];
 
-    // Debug: Log number of books rendered
-    console.log("Rendering books:", bookList.length);
-
     const banners = [
         {
             id: 1,
@@ -157,26 +155,45 @@ const HomePage = ({ books, loading, error, fetchBooks }) => {
     ];
 
     return (
-        <div className="home-page">
+        <motion.div
+            className="home-page"
+            initial={{ opacity: 0, y: 20 }} // Bắt đầu với opacity = 0 và dịch xuống 20px
+            animate={{ opacity: 1, y: 0 }} // Hiệu ứng fade-in và dịch lên
+            exit={{ opacity: 0, y: -20 }} // Hiệu ứng fade-out và dịch lên
+            transition={{ duration: 0.5 }} // Thời gian chuyển đổi 0.5s
+        >
             {/* Hero Banner */}
-            <Carousel className="main-banner" interval={5000} pause="hover">
-                {banners.map((banner) => (
-                    <Carousel.Item key={banner.id}>
-                        <img
-                            className="d-block w-100"
-                            src={banner.image}
-                            alt={banner.title}
-                        />
-                        <Carousel.Caption className="banner-caption">
-                            <h1>{banner.title}</h1>
-                            <p>{banner.description}</p>
-                            <Button variant="primary" size="lg">
-                                Xem Ngay
-                            </Button>
-                        </Carousel.Caption>
-                    </Carousel.Item>
-                ))}
-            </Carousel>
+            <motion.div
+                className="main-banner"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.8 }}
+            >
+                <Carousel interval={5000} pause="hover">
+                    {banners.map((banner) => (
+                        <Carousel.Item key={banner.id}>
+                            <img
+                                className="d-block w-100"
+                                src={banner.image}
+                                alt={banner.title}
+                            />
+                            <Carousel.Caption className="banner-caption">
+                                <div className="banner-content">
+                                    <div className="banner-text">
+                                        <h1>{banner.title}</h1>
+                                        <p>{banner.description}</p>
+                                    </div>
+                                    <div className="banner-action">
+                                        <Button variant="primary" size="lg">
+                                            Xem Ngay
+                                        </Button>
+                                    </div>
+                                </div>
+                            </Carousel.Caption>
+                        </Carousel.Item>
+                    ))}
+                </Carousel>
+            </motion.div>
 
             <Container className="main-content">
                 {/* Filter Button */}
@@ -326,7 +343,12 @@ const HomePage = ({ books, loading, error, fetchBooks }) => {
                 </div>
 
                 {/* Book Grid */}
-                <section className="book-section mt-4">
+                <motion.section
+                    className="book-section mt-4"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.8 }}
+                >
                     <div className="section-header">
                         <h2>Sách Nổi Bật</h2>
                         <Button variant="outline-primary">Xem Tất Cả</Button>
@@ -367,9 +389,9 @@ const HomePage = ({ books, loading, error, fetchBooks }) => {
                         )}
                     </Row>
                     {renderPagination()}
-                </section>
+                </motion.section>
             </Container>
-        </div>
+        </motion.div>
     );
 };
 

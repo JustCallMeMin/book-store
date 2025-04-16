@@ -1,121 +1,126 @@
-import React, { useState, useEffect } from "react";
-import { Container, Row, Col, Card, Form } from "react-bootstrap";
-import { useParams } from "react-router-dom";
+import React, { Component } from "react";
+import { connect } from "react-redux";
+import { Container, Row, Col, Card, Spinner } from "react-bootstrap";
+import { getCategory } from "../store/actions/customCategory/customCategoryActions";
+import { fetchBooksByFilter } from "../store/actions/book/bookActions";
 import BookCard from "../components/BookCard";
+import { withRouter } from "../store/HOC/withRouter"; // Import HOC withRouter
+import { motion } from "framer-motion"; // Import Framer Motion
+import "./CategoryBooks.css"; // Import CSS file for custom styles
 
-const CategoryBooks = () => {
-    const { categoryId } = useParams();
-    const [books, setBooks] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [sortBy, setSortBy] = useState("newest");
-    const [priceRange, setPriceRange] = useState("all");
+class CategoryBooks extends Component {
+    componentDidMount() {
+        const { categoryId } = this.props.params; // Lấy categoryId từ URL
+        this.props.getCategory(categoryId); // Gọi action để lấy dữ liệu category
+    }
 
-    useEffect(() => {
-        fetchBooks();
-    }, [categoryId, sortBy, priceRange]);
+    componentDidUpdate(prevProps) {
+        const { category } = this.props;
 
-    const fetchBooks = async () => {
-        setLoading(true);
-        try {
-            // TODO: Implement API call
-            const dummyBooks = [
-                {
-                    id: 1,
-                    title: "Sách 1",
-                    author: "Tác giả 1",
-                    price: 150000,
-                    image: "https://via.placeholder.com/150",
-                    discount: 10,
-                },
-                {
-                    id: 2,
-                    title: "Sách 2",
-                    author: "Tác giả 2",
-                    price: 200000,
-                    image: "https://via.placeholder.com/150",
-                    discount: 0,
-                },
-                // Thêm sách mẫu khác...
-            ];
-            setBooks(dummyBooks);
-        } catch (error) {
-            console.error("Error fetching books:", error);
+        // Gọi lại API nếu category thay đổi
+        if (prevProps.category !== category && category?.url) {
+            this.props.fetchBooksByFilter(category.url); // Gọi API với category.url
         }
-        setLoading(false);
-    };
+    }
 
-    const handleSortChange = (e) => {
-        setSortBy(e.target.value);
-    };
+    render() {
+        const { category, books, loading, error } = this.props;
 
-    const handlePriceRangeChange = (e) => {
-        setPriceRange(e.target.value);
-    };
-
-    return (
-        <Container className="py-4">
-            <Row className="mb-4">
-                <Col md={6}>
-                    <h2>Danh mục: {categoryId}</h2>
-                </Col>
-                <Col md={3}>
-                    <Form.Group>
-                        <Form.Label>Sắp xếp theo</Form.Label>
-                        <Form.Select value={sortBy} onChange={handleSortChange}>
-                            <option value="newest">Mới nhất</option>
-                            <option value="price-asc">Giá tăng dần</option>
-                            <option value="price-desc">Giá giảm dần</option>
-                            <option value="name-asc">Tên A-Z</option>
-                            <option value="name-desc">Tên Z-A</option>
-                        </Form.Select>
-                    </Form.Group>
-                </Col>
-                <Col md={3}>
-                    <Form.Group>
-                        <Form.Label>Khoảng giá</Form.Label>
-                        <Form.Select
-                            value={priceRange}
-                            onChange={handlePriceRangeChange}
-                        >
-                            <option value="all">Tất cả</option>
-                            <option value="0-100000">Dưới 100.000đ</option>
-                            <option value="100000-200000">
-                                100.000đ - 200.000đ
-                            </option>
-                            <option value="200000-500000">
-                                200.000đ - 500.000đ
-                            </option>
-                            <option value="500000">Trên 500.000đ</option>
-                        </Form.Select>
-                    </Form.Group>
-                </Col>
-            </Row>
-
-            {loading ? (
-                <div className="text-center py-5">
-                    <div className="spinner-border text-primary" role="status">
-                        <span className="visually-hidden">Đang tải...</span>
-                    </div>
+        if (loading) {
+            return (
+                <div className="loading-container">
+                    <Spinner animation="border" variant="primary" />
+                    <p>Đang tải dữ liệu...</p>
                 </div>
-            ) : (
-                <Row xs={1} md={2} lg={4} className="g-4">
-                    {books.map((book) => (
-                        <Col key={book.id}>
-                            <BookCard book={book} />
-                        </Col>
-                    ))}
-                </Row>
-            )}
+            );
+        }
 
-            {!loading && books.length === 0 && (
+        if (error) {
+            return (
                 <Card className="text-center p-5">
                     <Card.Body>
-                        <h4>Không tìm thấy sách nào trong danh mục này</h4>
+                        <h4 className="text-danger">{error}</h4>
                     </Card.Body>
                 </Card>
-            )}
-        </Container>
-    );
+            );
+        }
+
+        if (!category) {
+            return (
+                <Card className="text-center p-5">
+                    <Card.Body>
+                        <h4>Không tìm thấy danh mục</h4>
+                    </Card.Body>
+                </Card>
+            );
+        }
+
+        return (
+            <motion.div
+                className="category-books-page"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.5 }}
+            >
+                <Container className="py-4">
+                    {/* Header Section */}
+                    <Row className="mb-4">
+                        <Col>
+                            <div className="category-header text-center">
+                                <h2 className="category-title">
+                                    {category.name}
+                                </h2>
+                                <p className="category-description">
+                                    {category.description || "Danh mục sách"}
+                                </p>
+                                <p className="category-count">
+                                    {books.length} sách trong danh mục này
+                                </p>
+                            </div>
+                        </Col>
+                    </Row>
+
+                    {/* Book Grid */}
+                    <Row xs={1} md={2} lg={4} className="g-4">
+                        {Array.isArray(books) && books.length > 0 ? (
+                            books.map((book) => (
+                                <Col key={book.id}>
+                                    <BookCard book={book} />
+                                </Col>
+                            ))
+                        ) : (
+                            <Col>
+                                <Card className="text-center p-5">
+                                    <Card.Body>
+                                        <h4>
+                                            Không tìm thấy sách nào trong danh
+                                            mục này
+                                        </h4>
+                                    </Card.Body>
+                                </Card>
+                            </Col>
+                        )}
+                    </Row>
+                </Container>
+            </motion.div>
+        );
+    }
+}
+
+const mapStateToProps = (state) => ({
+    category: state.customCategoryReducer.category,
+    books: state.bookReducer.books,
+    loading: state.bookReducer.loading || state.customCategoryReducer.loading,
+    error: state.bookReducer.error || state.customCategoryReducer.error,
+});
+
+const mapDispatchToProps = {
+    getCategory,
+    fetchBooksByFilter,
 };
 
-export default CategoryBooks;
+export default connect(
+    mapStateToProps,
+    mapDispatchToProps
+)(withRouter(CategoryBooks));

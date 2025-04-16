@@ -33,6 +33,9 @@ import {
     CONFIRM_ORDER_REQUEST,
     CONFIRM_ORDER_SUCCESS,
     CONFIRM_ORDER_FAILURE,
+    CANCEL_ORDER_FAILURE,
+    CANCEL_ORDER_REQUEST,
+    CANCEL_ORDER_SUCCESS,
 } from "./orderTypes";
 
 const BASE_URL = process.env.REACT_APP_API_BASE_URL;
@@ -379,5 +382,36 @@ export const confirmOrder = (orderCode) => async (dispatch) => {
         }
     } catch (e) {
         handleApiError(dispatch, confirmOrderFailure, e);
+    }
+};
+const cancelOrderRequest = () => ({ type: CANCEL_ORDER_REQUEST });
+const cancelOrderSuccess = () => ({
+    type: CANCEL_ORDER_SUCCESS,
+});
+const cancelOrderFailure = (error) => ({
+    type: CANCEL_ORDER_FAILURE,
+    payload: error,
+});
+
+export const cancelOrder = (orderCode) => async (dispatch) => {
+    dispatch(cancelOrderRequest());
+    const apiUrl = BASE_URL + "orders/cancel-order";
+    try {
+        const res = await customAxios.post(
+            apiUrl,
+            { order_code: orderCode },
+            {
+                withCredentials: true,
+            }
+        );
+        if (res.status === 200 || res.status === 201) {
+            dispatch(cancelOrderSuccess());
+        } else {
+            dispatch(
+                cancelOrderFailure(res.data.message || "Failed to cancel order")
+            );
+        }
+    } catch (e) {
+        handleApiError(dispatch, cancelOrderFailure, e);
     }
 };

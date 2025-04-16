@@ -790,10 +790,7 @@ class Checkout extends Component {
                         <Modal.Title>Xác minh OTP</Modal.Title>
                     </Modal.Header>
                     <Modal.Body>
-                        <p>
-                            Vui lòng nhập mã OTP được gửi đến số điện thoại{" "}
-                            {phoneNumber}
-                        </p>
+                        <p>Vui lòng nhập mã OTP được gửi đến email của bạn</p>
                         <Form.Group controlId="formOtp" className="mb-3">
                             <Form.Label>Mã OTP</Form.Label>
                             <Form.Control

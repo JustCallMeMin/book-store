@@ -24,28 +24,64 @@
 }
 
 .banner-caption {
+    position: absolute;
+
+    left: 50%;
+    transform: translateX(-50%);
     background: rgba(0, 0, 0, 0.6);
-    padding: 25px;
-    border-radius: 8px;
-    max-width: 600px;
-    margin: 0 auto;
-    transform: translateY(10px);
-    transition: transform 0.3s ease;
-}
-
-.main-banner .carousel-item:hover .banner-caption {
-    transform: translateY(0);
-}
-
-.banner-caption h1 {
-    font-size: 36px;
-    font-weight: 700;
+    padding: 20px 30px;
+    border-radius: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 80%;
     color: #fff;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
 }
 
-.banner-caption p {
-    font-size: 18px;
+.banner-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.banner-text {
+    flex: 1;
+    margin-right: 20px;
+    text-align: left; /* Căn chỉnh nội dung sang trái */
+}
+
+.banner-text h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 10px;
+    color: #fff;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
+}
+
+.banner-text p {
+   
     color: #ddd;
+    text-align: left; /* Đảm bảo căn trái cho mô tả */
+}
+
+.banner-action {
+    flex-shrink: 0;
+    text-align: right; /* Căn phải cho nút */
+}
+
+.banner-action button {
+    font-size: 1rem;
+    padding: 10px 20px;
+    border-radius: 8px;
+    background-color: #007bff;
+    border: none;
+    transition: background-color 0.3s ease;
+}
+
+.banner-action button:hover {
+    background-color: #0056b3;
 }
 
 .main-content {
@@ -164,15 +200,34 @@
     }
 
     .banner-caption {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .banner-content {
+        flex-direction: column;
+    }
+
+    .banner-text {
+        margin-right: 0;
+        margin-bottom: 15px;
+        text-align: center; /* Căn giữa trên màn hình nhỏ */
+    }
+
+    .banner-text h1 {
+        font-size: 1.8rem;
+    }
+
+    .banner-text p {
+        font-size: 1rem;
+    }
+
+    .banner-action button {
+        font-size: 0.9rem;
+    }
+
+    .banner-caption {
         padding: 15px;
-    }
-
-    .banner-caption h1 {
-        font-size: 24px;
-    }
-
-    .banner-caption p {
-        font-size: 14px;
     }
 
     .promo-banner img {

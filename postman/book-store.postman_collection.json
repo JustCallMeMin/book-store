@@ -1,10 +1,11 @@
 {
 	"info": {
-		"_postman_id": "9fffadc6-2438-4bb9-8c30-14b7dbf9febc",
+		"_postman_id": "b09521cd-bb60-41e1-ab8e-f1403588650d",
 		"name": "Book Store API",
 		"description": "API Collection for Book Store project",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-		"_exporter_id": "34300204"
+		"_exporter_id": "34300204",
+		"_collection_link": "https://task-management-9129.postman.co/workspace/22277be0-4db2-4abb-ab3f-275c5c3e37db/collection/34300204-b09521cd-bb60-41e1-ab8e-f1403588650d?action=share&source=collection_link&creator=34300204"
 	},
 	"item": [
 		{
@@ -1453,6 +1454,44 @@
 					"response": []
 				},
 				{
+					"name": "Restore Deleted Book",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{adminToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/gutendex/books/{{book_id}}/restore",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"gutendex",
+								"books",
+								"{{book_id}}",
+								"restore"
+							]
+						},
+						"description": "Khôi phục sách đã bị xóa mềm (soft delete)"
+					},
+					"response": []
+				},
+				{
 					"name": "Clear Suggestions Cache (Admin)",
 					"request": {
 						"auth": {
@@ -1874,6 +1913,63 @@
 							]
 						},
 						"description": "Delete a publisher (admin only, will fail if publisher has books)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Users",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{adminToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/users?limit=15&page=1&search=&sort_by=created_at&sort_order=desc",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"users"
+							],
+							"query": [
+								{
+									"key": "limit",
+									"value": "15"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "search",
+									"value": ""
+								},
+								{
+									"key": "sort_by",
+									"value": "created_at"
+								},
+								{
+									"key": "sort_order",
+									"value": "desc"
+								}
+							]
+						},
+						"description": "Lấy danh sách tất cả người dùng (chỉ dành cho admin)"
 					},
 					"response": []
 				}

@@ -221,12 +221,18 @@ class RedisCartService implements CartService
                 'recipient_phone' => $orderData['recipient_phone'],
                 'recipient_email' => $orderData['recipient_email'] ?? Auth::user()->email,
                 'total_amount' => $cartData['total_amount'],
+                'tax_amount'=>0,
+                'shipping_fee'=>$orderData['shipping_fee'],
                 'discount_amount' => $cartData['discount_amount'],
-                'final_amount' => $cartData['final_amount'],
+                'final_amount' => (float) $cartData['final_amount']+ (float)$orderData['shipping_fee'],
                 'payment_method' => $orderData['payment_method'],
                 'payment_status' => 'pending',
-                'status' => 'new',
-                'note' => $orderData['note'] ?? null
+                'status' => 'pending',
+                'note' => $orderData['note'] ?? null,
+                'order_date' => now(),
+                'payment_date' => null,
+                'shipping_date' => null,
+                'delivery_date'=>null
             ]);
 
             $order->save();

@@ -1,0 +1,254 @@
+.home-page {
+    background-color: #f5f5f5;
+    padding-bottom: 40px;
+}
+
+.main-banner {
+    margin-bottom: 40px;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.main-banner .carousel-item {
+    height: 450px;
+}
+
+.main-banner img {
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s ease;
+}
+
+.main-banner .carousel-item:hover img {
+    transform: scale(1.05);
+}
+
+.banner-caption {
+    position: absolute;
+
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.6);
+    padding: 20px 30px;
+    border-radius: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 80%;
+    color: #fff;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+}
+
+.banner-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.banner-text {
+    flex: 1;
+    margin-right: 20px;
+    text-align: left; /* Căn chỉnh nội dung sang trái */
+}
+
+.banner-text h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 10px;
+    color: #fff;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
+}
+
+.banner-text p {
+   
+    color: #ddd;
+    text-align: left; /* Đảm bảo căn trái cho mô tả */
+}
+
+.banner-action {
+    flex-shrink: 0;
+    text-align: right; /* Căn phải cho nút */
+}
+
+.banner-action button {
+    font-size: 1rem;
+    padding: 10px 20px;
+    border-radius: 8px;
+    background-color: #007bff;
+    border: none;
+    transition: background-color 0.3s ease;
+}
+
+.banner-action button:hover {
+    background-color: #0056b3;
+}
+
+.main-content {
+    padding: 0 15px;
+}
+
+.filter-toggle-section {
+    margin-bottom: 20px;
+    text-align: right;
+}
+
+.filter-toggle {
+    font-size: 16px;
+    padding: 10px 20px;
+}
+
+.filter-offcanvas {
+    width: 300px !important;
+}
+
+.filter-offcanvas .offcanvas-body {
+    padding: 20px;
+}
+
+.book-section {
+    margin-bottom: 40px;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.section-header h2 {
+    margin: 0;
+    font-size: 28px;
+    font-weight: 700;
+    color: #333;
+}
+
+.promo-banner {
+    position: relative;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 30px;
+}
+
+.promo-banner img {
+    height: 200px;
+    object-fit: cover;
+    width: 100%;
+}
+
+.promo-content {
+    position: absolute;
+    top: 50%;
+    left: 30px;
+    transform: translateY(-50%);
+    color: #fff;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+.promo-content h3 {
+    font-size: 26px;
+    font-weight: 700;
+}
+
+.promo-content p {
+    font-size: 16px;
+}
+
+/* Custom grid for 5 books per row */
+.book-grid {
+    margin-left: -10px;
+    margin-right: -10px;
+}
+
+.book-col {
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
+@media (min-width: 992px) {
+    .book-col {
+        flex: 0 0 20%;
+        max-width: 20%;
+    }
+}
+
+@media (max-width: 991px) {
+    .book-col {
+        flex: 0 0 33.333333%;
+        max-width: 33.333333%;
+    }
+}
+
+@media (max-width: 767px) {
+    .book-col {
+        flex: 0 0 50%;
+        max-width: 50%;
+    }
+}
+
+@media (max-width: 575px) {
+    .book-col {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+}
+
+@media (max-width: 768px) {
+    .main-banner .carousel-item {
+        height: 300px;
+    }
+
+    .banner-caption {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .banner-content {
+        flex-direction: column;
+    }
+
+    .banner-text {
+        margin-right: 0;
+        margin-bottom: 15px;
+        text-align: center; /* Căn giữa trên màn hình nhỏ */
+    }
+
+    .banner-text h1 {
+        font-size: 1.8rem;
+    }
+
+    .banner-text p {
+        font-size: 1rem;
+    }
+
+    .banner-action button {
+        font-size: 0.9rem;
+    }
+
+    .banner-caption {
+        padding: 15px;
+    }
+
+    .promo-banner img {
+        height: 150px;
+    }
+
+    .promo-content h3 {
+        font-size: 20px;
+    }
+
+    .promo-content p {
+        font-size: 14px;
+    }
+}
+
+@media (max-width: 576px) {
+    .section-header h2 {
+        font-size: 24px;
+    }
+
+    .filter-toggle-section {
+        text-align: center;
+    }
+}

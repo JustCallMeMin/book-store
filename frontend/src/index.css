@@ -1,0 +1,153 @@
+:root {
+    /* Màu chủ đạo - Xanh dương đậm */
+    --primary-color: #2C3E50;
+    --primary-dark: #1a2530;
+    --primary-light: #34495e;
+
+    /* Màu phụ - Xanh dương nhạt */
+    --secondary-color: #3498db;
+    --secondary-dark: #2980b9;
+    --secondary-light: #5dade2;
+
+    /* Màu nhấn - Cam san hô */
+    --accent-color: #e74c3c;
+    --accent-dark: #c0392b;
+    --accent-light: #ec7063;
+
+    /* Màu nền */
+    --background-color: #f8f9fa;
+    --background-dark: #e9ecef;
+
+    /* Màu text */
+    --text-color: #2c3e50;
+    --text-secondary: #6c757d;
+    --text-light: #adb5bd;
+
+    /* Màu success/error */
+    --success-color: #27ae60;
+    --error-color: #e74c3c;
+
+    /* Màu border và shadow */
+    --border-color: #dee2e6;
+    --shadow-sm: 0 2px 4px rgba(44, 62, 80, 0.1);
+    --shadow-md: 0 4px 6px rgba(44, 62, 80, 0.15);
+    --shadow-lg: 0 10px 15px rgba(44, 62, 80, 0.2);
+}
+
+body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+        'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+        sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    color: var(--text-color);
+    background-color: var(--background-color);
+}
+
+code {
+    font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+        monospace;
+}
+
+/* Override Bootstrap primary color */
+.btn-primary {
+    background-color: var(--primary-color) !important;
+    border-color: var(--primary-color) !important;
+}
+
+.btn-primary:hover {
+    background-color: var(--primary-dark) !important;
+    border-color: var(--primary-dark) !important;
+}
+
+.btn-outline-primary {
+    color: var(--primary-color) !important;
+    border-color: var(--primary-color) !important;
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--primary-color) !important;
+    color: white !important;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--background-color);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--primary-light);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-color);
+}
+
+/* Override Bootstrap colors */
+.text-primary {
+    color: var(--primary-color) !important;
+}
+
+.bg-primary {
+    background-color: var(--primary-color) !important;
+}
+
+.border-primary {
+    border-color: var(--primary-color) !important;
+}
+
+.nav-link {
+    color: var(--primary-color) !important;
+}
+
+.nav-link:hover {
+    color: var(--primary-dark) !important;
+}
+
+.form-control:focus {
+    border-color: var(--primary-color) !important;
+    box-shadow: 0 0 0 0.2rem var(--shadow-color) !important;
+}
+
+/* Header Icons */
+.header-icon {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+    color: var(--text-color);
+    margin: 0 1rem;
+}
+
+.header-icon:hover {
+    color: var(--secondary-color);
+}
+
+.header-icon .icon-text {
+    margin-left: 0.5rem;
+    font-size: 0.9rem;
+}
+
+/* Cart Badge */
+.cart-badge {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background-color: var(--accent-color);
+    color: white;
+    border-radius: 50%;
+    padding: 0.25rem;
+    min-width: 20px;
+    min-height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: bold;
+}

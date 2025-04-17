@@ -17,7 +17,7 @@ import { getPermissionsFromApi } from "../../store/actions/user/userActions";
 import { parsePermissionsForPage } from "../utils/permissionHelper";
 import "../styles/admin.css";
 import withNavigate from "src/store/HOC/withNavigate";
-import { FaJediOrder } from "react-icons/fa";
+import { FaJediOrder, FaUser } from "react-icons/fa";
 
 const { Content } = AntLayout;
 
@@ -106,6 +106,7 @@ class MainLayout extends Component {
             permissions,
             "publishers"
         );
+        const userPerm = parsePermissionsForPage(permissions, "users");
 
         const roleMenuItems = userInfo.roles.map((role) => ({
             key: role,
@@ -134,6 +135,17 @@ class MainLayout extends Component {
                 icon: <DashboardOutlined />,
                 label: <Link to="/admin">Dashboard</Link>,
             },
+            ...(userPerm.access
+                ? [
+                      {
+                          key: "7",
+                          icon: <FaUser />,
+                          label: (
+                              <Link to="/admin/users">Quản lý người dùng</Link>
+                          ),
+                      },
+                  ]
+                : []),
             ...(categoryPerm.access
                 ? [
                       {
@@ -191,6 +203,7 @@ class MainLayout extends Component {
                       },
                   ]
                 : []),
+
             // {
             //     key: "10",
             //     icon: <OrderedListOutlined />,

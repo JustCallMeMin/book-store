@@ -150,7 +150,7 @@ const HomePage = ({ books, loading, error, fetchBooks }) => {
             id: 2,
             image: "/media/banner2.png",
             title: "Ưu Đãi Đặc Biệt",
-            description: "Giảm giá lên đến 40% cho sách mới!",
+            description: "Giảm giá lên đến 50% cho sách mới!",
         },
     ];
 
@@ -337,7 +337,7 @@ const HomePage = ({ books, loading, error, fetchBooks }) => {
                     />
                     <div className="promo-content">
                         <h3>Ưu Đãi Hôm Nay</h3>
-                        <p>Giảm giá 30% cho tất cả sách mới!</p>
+                        <p>Giảm giá 30% cho tất cả sách văn học!</p>
                         <Button variant="warning">Mua Ngay</Button>
                     </div>
                 </div>

@@ -310,9 +310,9 @@ class OrderService
         $totalPages = $books->sum('page_count'); // Tổng số trang của tất cả các sản phẩm trong giỏ hàng
 
         // Tính toán kích thước và trọng lượng
-        $weight = 1 * $totalPages; // // Giả sử mỗi trang nặng 50 gram
-        $length = 20; // Chiều dài 30cm cho mỗi sản phẩm
-        $width = 10;  // Chiều rộng 25cm cho mỗi sản phẩm
+        $weight = 5 * $totalPages; // // Giả sử mỗi trang nặng 50 gram
+        $length = 30; // Chiều dài 30cm cho mỗi sản phẩm
+        $width = 25;  // Chiều rộng 25cm cho mỗi sản phẩm
         $height = (int) ceil(0.01 * $totalPages + 0.05 * $quantity); // Chiều cao 0.01cm cho mỗi trang và 0.05cm cho mỗi tờ bìa mỗi sản phẩm
 
         return compact('weight', 'height', 'length', 'width');
@@ -852,13 +852,10 @@ class OrderService
                 'message' => "Hủy đơn hàng thành công",
                 'data' => $order,
             ], 200);
-
         } catch (\Exception $e) {
             Log::error('Error cancelling order', ['error' => $e->getMessage()]);
             return response()->json(['success' => false, 'message' => 'Có lỗi xảy ra khi hủy đơn hàng', 'error' => $e->getMessage()], 500);
         }
-
-
     }
 
     // /**
@@ -930,7 +927,6 @@ class OrderService
                 'message' => "Lấy danh sách sách trong đơn hàng thành công",
                 'data' => $result
             ]);
-
         } catch (\Exception $e) {
             Log::error('Error get order_items', ['error' => $e->getMessage()]);
             return response()->json([
@@ -940,5 +936,4 @@ class OrderService
             ], 500);
         }
     }
-
 }

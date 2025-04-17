@@ -302,7 +302,7 @@ const Dashboard = () => {
                 ))}
             </Row>
 
-            <Row gutter={[16, 16]} style={{ marginTop: 24 }}>
+            {/* <Row gutter={[16, 16]} style={{ marginTop: 24 }}>
                 {[1, 2].map((_, index) => (
                     <Col xs={24} md={12} key={index}>
                         <motion.div
@@ -314,7 +314,7 @@ const Dashboard = () => {
                         </motion.div>
                     </Col>
                 ))}
-            </Row>
+            </Row> */}
 
             <Row style={{ marginTop: 24 }}>
                 <Col xs={24}>

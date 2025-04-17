@@ -21,6 +21,7 @@ import AdminProfile from "./admin/pages/AdminProfile";
 import BookManagement from "./admin/pages/BookManagement";
 import MyOrders from "./pages/MyOrders";
 import OrderManagement from "./admin/pages/OrderManagement";
+import UserManagement from "./admin/pages/UserManagement";
 const user = JSON.parse(sessionStorage.getItem("user") || "{}");
 const accessAdminRoles = ["Admin"];
 function App() {
@@ -71,6 +72,7 @@ function App() {
                         <Route path="books" element={<BookManagement />} />
                         <Route path="profile" element={<AdminProfile />} />
                         <Route path="orders" element={<OrderManagement />} />
+                        <Route path="users" element={<UserManagement />} />
                     </Route>
                 </Routes>
             </Provider>

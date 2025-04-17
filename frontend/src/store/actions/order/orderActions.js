@@ -208,9 +208,7 @@ export const getShippingFee = (districtId, wardId) => async (dispatch) => {
     dispatch(getShippingFeeRequest());
     const apiUrl = BASE_URL + `orders/shipping-fee/${districtId}/${wardId}`;
     try {
-        const res = await customAxios.get(apiUrl, {
-            withCredentials: true,
-        });
+        const res = await customAxios.get(apiUrl, {});
         if (res.status === 200 && res.data.success) {
             dispatch(getShippingFeeSuccess(res.data.data.shipping_fee.total));
         } else {
